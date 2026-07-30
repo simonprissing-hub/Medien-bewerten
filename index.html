@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mein Filmtagebuch</title>
+    <style>
+        :root {
+            /* System Colors (Light) */
+            --bg-color: #f2f2f7;
+            --surface-color: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #8e8e93;
+            --accent-color: #007aff;
+            --danger-color: #ff3b30;
+            --border-color: #c6c6c8;
+            --star-color: #ff9500;
+        }
+
+        [data-theme="dark"] {
+            /* System Colors (Dark) */
+            --bg-color: #000000;
+            --surface-color: #1c1c1e;
+            --text-primary: #ffffff;
+            --text-secondary: #98989f;
+            --border-color: #38383a;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Typography & Layout */
+        h1, h2, h3, p { margin: 0; }
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header-actions button {
+            background: none; border: none; color: var(--accent-color);
+            font-size: 24px; cursor: pointer; margin-left: 15px;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex; gap: 20px; overflow-x: auto;
+            padding: 15px 20px; background-color: var(--surface-color);
+            scrollbar-width: none;
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+        
+        .tab-item {
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            font-weight: 500; color: var(--text-primary); white-space: nowrap;
+            user-select: none; position: relative;
+        }
+        .tab-item.active { color: var(--accent-color); font-weight: 700; }
+        .tab-item.active::after {
+            content: ''; width: 100%; height: 3px; background-color: var(--accent-color);
+            border-radius: 2px; position: absolute; bottom: -5px;
+        }
+        .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; }
+
+        /* Movie List */
+        .movie-list { padding: 20px; display: grid; gap: 15px; }
+        .movie-row {
+            display: flex; gap: 15px; padding: 10px; border-radius: 12px;
+            background-color: var(--surface-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .movie-row:active { transform: scale(0.98); }
+        .movie-poster {
+            width: 80px; height: 120px; border-radius: 8px; object-fit: cover;
+            background-color: rgba(0, 122, 255, 0.1); display: flex;
+            align-items: center; justify-content: center; color: var(--accent-color);
+            font-size: 30px; overflow: hidden;
+        }
+        .movie-poster img { width: 100%; height: 100%; object-fit: cover; }
+        .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
+        .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+        .movie-rating { color: var(--star-color); font-weight: 600; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+        .movie-date { font-size: 12px; color: var(--text-secondary); }
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--text-secondary); }
+
+        /* Modals (Editor) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; z-index: 1000;
+            justify-content: center; align-items: flex-end; /* Mobile friendly bottom sheet */
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background-color: var(--bg-color); width: 100%; max-width: 800px;
+            height: 90vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        @media(min-width: 768px) {
+            .modal-overlay { align-items: center; }
+            .modal-content { height: 85vh; border-radius: 12px; }
+            .editor-layout { display: flex; gap: 30px; }
+            .editor-left { width: 300px; flex-shrink: 0; }
+            .editor-right { flex: 1; }
+        }
+        
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color);
+        }
+        .btn-text { background: none; border: none; font-size: 16px; cursor: pointer; }
+        .btn-cancel { color: var(--text-secondary); }
+        .btn-save { color: var(--accent-color); font-weight: 600; }
+        .btn-save:disabled { color: var(--border-color); cursor: not-allowed; }
+
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+        /* Editor specific styles */
+        .form-group { margin-bottom: 20px; }
+        .input-text {
+            width: 100%; padding: 12px 15px; border-radius: 10px; border: none;
+            background-color: var(--surface-color); color: var(--text-primary);
+            font-size: 16px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .poster-picker {
+            width: 100%; aspect-ratio: 2/3; background-color: rgba(0, 122, 255, 0.1);
+            border-radius: 12px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; color: var(--accent-color); cursor: pointer;
+            position: relative; overflow: hidden; margin-bottom: 10px; text-align: center;
+        }
+        .poster-picker img { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
+        .poster-picker input[type="file"] { display: none; }
+        
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
+        
+        /* Category Pills */
+        .category-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .category-pill {
+            padding: 8px 16px; border-radius: 20px; background-color: var(--border-color);
+            color: var(--text-primary); white-space: nowrap; cursor: pointer; font-size: 14px;
+        }
+        .category-pill.active { background-color: var(--accent-color); color: white; }
+        
+        /* Criteria */
+        .criterion-card {
+            background-color: var(--surface-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .criterion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .stars { display: flex; gap: 5px; font-size: 20px; color: var(--border-color); cursor: pointer; }
+        .star.filled { color: var(--star-color); }
+        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; }
+        textarea.input-text { resize: vertical; min-height: 60px; font-size: 14px; }
+
+        /* Small utilities */
+        .flex-row { display: flex; justify-content: space-between; align-items: center; }
+        .btn-primary { 
+            display: block; width: 100%; padding: 12px; border-radius: 10px; 
+            background: var(--accent-color); color: white; border: none; 
+            font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main View -->
+    <div class="header">
+        <h1>Mein Filmtagebuch</h1>
+        <div class="header-actions">
+            <button id="themeToggleBtn">◑</button>
+            <button id="addMovieBtn">＋</button>
+        </div>
+    </div>
+
+    <div class="tab-bar" id="tabBar">
+        <!-- Tabs injected by JS -->
+    </div>
+
+    <div class="movie-list" id="movieList">
+        <!-- Movies injected by JS -->
+    </div>
+
+    <!-- Movie Editor Modal -->
+    <div class="modal-overlay" id="movieModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="btn-text btn-cancel" id="cancelMovieBtn">Abbrechen</button>
+                <h3 id="movieModalTitle">Neuer Eintrag</h3>
+                <button class="btn-text btn-save" id="saveMovieBtn" disabled>Speichern</button>
+            </div>
+            <div class="modal-body">
+                <div class="editor-layout">
+                    <!-- Left Column -->
+                    <div class="editor-left">
+                        <label class="poster-picker" id="posterPicker">
+                            <span id="posterPlaceholder">📷<br>Poster auswählen</span>
+                            <img id="posterPreview" style="display: none;" src="" alt="Poster">
+                            <input type="file" id="posterInput" accept="image/*">
+                        </label>
+                        <div class="flex-row" style="margin-bottom: 15px;">
+                            <button class="btn-text btn-cancel" id="removePosterBtn" style="display:none; font-size:12px;">🗑 Bild entfernen</button>
+                        </div>
+                        
+                        <div class="form-group" style="background: var(--surface-color); padding: 15px; border-radius: 12px;">
+                            <div class="flex-row">
+                                <strong>Gesehen am:</strong>
+                                <button class="btn-icon" id="clearDateBtn">🗑</button>
+                            </div>
+                            <input type="date" class="input-text" id="watchedDateInput" style="margin-top: 10px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="editor-right">
+                        <input type="text" class="input-text" id="movieTitleInput" placeholder="Titel des Films / der Serie" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+                        
+                        <div class="flex-row">
+                            <div class="section-title">Kategorie (Preset)</div>
+                            <button class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Kategorie</button>
+                        </div>
+                        <div class="category-scroll" id="categoryList">
+                            <!-- Categories injected by JS -->
+                        </div>
+
+                        <div class="section-title" style="margin-top: 30px;">Bewertungskriterien</div>
+                        <div id="criteriaContainer">
+                            <!-- Criteria injected by JS -->
+                        </div>
+                        <button class="btn-text btn-save" id="addCriterionBtn" style="margin-top: 15px;">+ Weiteres Kriterium hinzufügen</button>
+                        
+                        <button class="btn-primary" id="deleteMovieBtn" style="background: var(--danger-color); margin-top: 40px; display: none;">Film löschen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Small Modal (Tabs / Categories) -->
+    <div class="modal-overlay" id="simpleModal">
+        <div class="modal-content" style="height: auto; max-width: 400px; margin: auto; border-radius: 12px;">
+            <div class="modal-header">
+                <button class="btn-text btn-cancel" id="cancelSimpleModalBtn">Abbrechen</button>
+                <h3 id="simpleModalTitle">Titel</h3>
+                <button class="btn-text btn-save" id="saveSimpleModalBtn">Speichern</button>
+            </div>
+            <div class="modal-body" id="simpleModalBody">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular via Import Map for Browser usage) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbfhbNAAtz-H3gvXYDECvmnCSQznkBWDA",
+            authDomain: "medien-bewerten.firebaseapp.com",
+            projectId: "medien-bewerten",
+            storageBucket: "medien-bewerten.firebasestorage.app",
+            messagingSenderId: "494393371345",
+            appId: "1:494393371345:web:076bdefc2b0601fc7e33f0"
+        };
+
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ==========================================
+        // 2. STATE MANAGEMENT
+        // ==========================================
+        let state = {
+            tabs: [], categories: [], movies: [],
+            currentTabId: null,
+            editingMovieId: null,
+            movieForm: {
+                title: "", imageData: null, watchedDate: null,
+                targetTabId: null, selectedCategoryId: null, criteria: []
+            }
+        };
+
+        // DOM Elements
+        const DOM = {
+            tabBar: document.getElementById('tabBar'),
+            movieList: document.getElementById('movieList'),
+            themeBtn: document.getElementById('themeToggleBtn'),
+            // Modals
+            movieModal: document.getElementById('movieModal'),
+            simpleModal: document.getElementById('simpleModal')
+        };
+
+        // ==========================================
+        // 3. THEME MANAGEMENT
+        // ==========================================
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        DOM.themeBtn.onclick = () => {
+            const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        };
+
+        // ==========================================
+        // 4. FIREBASE LISTENERS (REALTIME SYNC)
+        // ==========================================
+        onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), (snapshot) => {
+            state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (state.tabs.length === 0) setupDefaults(); // Create defaults if empty
+            if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
+            renderTabs(); renderMovies();
+        });
+
+        onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), (snapshot) => {
+            state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (state.movieForm.targetTabId) renderEditorCategories();
+        });
+
+        onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), (snapshot) => {
+            state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderMovies();
+        });
+
+        async function setupDefaults() {
+            await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
+            await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
+            await addDoc(collection(db, "categories"), { name: "Action", criteriaNames: ["Spannung & Pacing", "Effekte", "Choreografie"], orderIndex: 0 });
+            await addDoc(collection(db, "categories"), { name: "Drama", criteriaNames: ["Schauspiel", "Drehbuch", "Emotionen"], orderIndex: 1 });
+        }
+
+        // ==========================================
+        // 5. RENDERING: MAIN VIEW
+        // ==========================================
+        function renderTabs() {
+            DOM.tabBar.innerHTML = '';
+            state.tabs.forEach((tab, index) => {
+                const el = document.createElement('div');
+                el.className = `tab-item ${state.currentTabId === tab.id ? 'active' : ''}`;
+                el.innerText = tab.name;
+                el.draggable = true;
+                
+                // Select Tab
+                el.onclick = () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); };
+                
+                // Context menu (Long press / Right click for edit/delete)
+                el.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    if(confirm(`Möchtest du den Tab "${tab.name}" löschen?`)) {
+                        deleteDoc(doc(db, "tabs", tab.id));
+                        if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
+                    }
+                };
+
+                // Drag & Drop
+                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                el.ondragover = (e) => e.preventDefault();
+                el.ondrop = async (e) => {
+                    e.preventDefault();
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    if (fromIndex !== toIndex) {
+                        let newTabs = [...state.tabs];
+                        const [moved] = newTabs.splice(fromIndex, 1);
+                        newTabs.splice(toIndex, 0, moved);
+                        // Update order in DB
+                        newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
+                    }
+                };
+                DOM.tabBar.appendChild(el);
+            });
+
+            // Add Tab Button
+            const addBtn = document.createElement('div');
+            addBtn.className = 'tab-item add-tab-btn'; addBtn.innerText = '⊕';
+            addBtn.onclick = () => openSimpleModal('Tab', null);
+            DOM.tabBar.appendChild(addBtn);
+        }
+
+        function renderMovies() {
+            DOM.movieList.innerHTML = '';
+            const filtered = state.movies.filter(m => m.tabID === state.currentTabId);
+            
+            if (filtered.length === 0) {
+                DOM.movieList.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🍿</div>
+                        <h2>Keine Einträge.</h2>
+                        <p>Füge deinen ersten Film hinzu.</p>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach(movie => {
+                // Calculate average
+                const rated = movie.criteria.filter(c => c.stars > 0);
+                const avg = rated.length ? (rated.reduce((s, c) => s + c.stars, 0) / rated.length).toFixed(1) : '0.0';
+                
+                const dateStr = movie.watchedDate 
+                    ? `Gesehen am ${new Date(movie.watchedDate).toLocaleDateString('de-DE')}`
+                    : `Erstellt am ${new Date(movie.dateAdded).toLocaleDateString('de-DE')}`;
+
+                const imgHtml = movie.imageData 
+                    ? `<img src="${movie.imageData}" alt="Poster">` 
+                    : `🎬`;
+
+                const el = document.createElement('div');
+                el.className = 'movie-row';
+                el.innerHTML = `
+                    <div class="movie-poster">${imgHtml}</div>
+                    <div class="movie-info">
+                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-rating">${avg} ★</div>
+                        <div class="movie-date">${dateStr}</div>
+                    </div>
+                `;
+                el.onclick = () => openMovieEditor(movie);
+                DOM.movieList.appendChild(el);
+            });
+        }
+
+        // ==========================================
+        // 6. MOVIE EDITOR MODAL
+        // ==========================================
+        const titleInput = document.getElementById('movieTitleInput');
+        const saveBtn = document.getElementById('saveMovieBtn');
+        const posterInput = document.getElementById('posterInput');
+        const posterPreview = document.getElementById('posterPreview');
+        const dateInput = document.getElementById('watchedDateInput');
+
+        titleInput.addEventListener('input', (e) => {
+            state.movieForm.title = e.target.value;
+            validateMovieForm();
+        });
+        
+        dateInput.addEventListener('change', (e) => { state.movieForm.watchedDate = e.target.value; });
+        document.getElementById('clearDateBtn').onclick = () => { dateInput.value = ''; state.movieForm.watchedDate = null; };
+
+        document.getElementById('addMovieBtn').onclick = () => openMovieEditor(null);
+        document.getElementById('cancelMovieBtn').onclick = () => DOM.movieModal.classList.remove('active');
+        document.getElementById('addCriterionBtn').onclick = () => {
+            state.movieForm.criteria.push({ id: Date.now().toString(), name: "Neues Kriterium", stars: 0, notes: "" });
+            renderEditorCriteria();
+        };
+
+        // Poster Handling (Base64 + Resize)
+        posterInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Downscale to max 800px width/height to save DB space
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 800;
+                    let w = img.width, h = img.height;
+                    if (w > h && w > MAX_SIZE) { h *= MAX_SIZE/w; w = MAX_SIZE; }
+                    else if (h > MAX_SIZE) { w *= MAX_SIZE/h; h = MAX_SIZE; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    state.movieForm.imageData = resizedBase64;
+                    posterPreview.src = resizedBase64;
+                    posterPreview.style.display = 'block';
+                    document.getElementById('posterPlaceholder').style.display = 'none';
+                    document.getElementById('removePosterBtn').style.display = 'block';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('removePosterBtn').onclick = () => {
+            state.movieForm.imageData = null;
+            posterPreview.src = '';
+            posterPreview.style.display = 'none';
+            document.getElementById('posterPlaceholder').style.display = 'block';
+            document.getElementById('removePosterBtn').style.display = 'none';
+        };
+
+        function openMovieEditor(movie) {
+            state.editingMovieId = movie ? movie.id : null;
+            document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
+            
+            // Reset & Populate Form State
+            if (movie) {
+                state.movieForm = JSON.parse(JSON.stringify(movie)); // Deep copy
+            } else {
+                state.movieForm = {
+                    title: "", imageData: null, 
+                    watchedDate: new Date().toISOString().split('T')[0],
+                    targetTabId: state.currentTabId, selectedCategoryId: state.categories[0]?.id,
+                    criteria: state.categories[0] ? state.categories[0].criteriaNames.map(n => ({ id: Math.random().toString(), name: n, stars: 0, notes: "" })) : []
+                };
+            }
+
+            // Bind UI
+            titleInput.value = state.movieForm.title;
+            dateInput.value = state.movieForm.watchedDate || '';
+            
+            if (state.movieForm.imageData) {
+                posterPreview.src = state.movieForm.imageData;
+                posterPreview.style.display = 'block';
+                document.getElementById('posterPlaceholder').style.display = 'none';
+                document.getElementById('removePosterBtn').style.display = 'block';
+            } else {
+                posterPreview.src = '';
+                posterPreview.style.display = 'none';
+                document.getElementById('posterPlaceholder').style.display = 'block';
+                document.getElementById('removePosterBtn').style.display = 'none';
+            }
+
+            const delBtn = document.getElementById('deleteMovieBtn');
+            if (movie) {
+                delBtn.style.display = 'block';
+                delBtn.onclick = () => {
+                    if(confirm("Diesen Film wirklich löschen?")) {
+                        deleteDoc(doc(db, "movies", movie.id));
+                        DOM.movieModal.classList.remove('active');
+                    }
+                };
+            } else { delBtn.style.display = 'none'; }
+
+            renderEditorCategories();
+            renderEditorCriteria();
+            validateMovieForm();
+            DOM.movieModal.classList.add('active');
+        }
+
+        function renderEditorCategories() {
+            const list = document.getElementById('categoryList');
+            list.innerHTML = '';
+            state.categories.forEach(cat => {
+                const el = document.createElement('div');
+                el.className = `category-pill ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
+                el.innerText = cat.name;
+                
+                el.onclick = () => {
+                    state.movieForm.selectedCategoryId = cat.id;
+                    // Merge criteria
+                    let newCriteria = [];
+                    cat.criteriaNames.forEach(name => {
+                        const existing = state.movieForm.criteria.find(c => c.name === name);
+                        newCriteria.push(existing ? existing : { id: Math.random().toString(), name: name, stars: 0, notes: "" });
+                    });
+                    state.movieForm.criteria = newCriteria;
+                    renderEditorCategories();
+                    renderEditorCriteria();
+                };
+
+                el.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    if(confirm(`Kategorie '${cat.name}' aus Vorlagen löschen? (Bereits erstellte Filme behalten die Kriterien)`)){
+                        deleteDoc(doc(db, "categories", cat.id));
+                    }
+                };
+
+                list.appendChild(el);
+            });
+        }
+
+        function renderEditorCriteria() {
+            const container = document.getElementById('criteriaContainer');
+            container.innerHTML = '';
+            
+            state.movieForm.criteria.forEach((crit, index) => {
+                const card = document.createElement('div');
+                card.className = 'criterion-card';
+                
+                // Star generation
+                let starsHtml = '';
+                for(let i=1; i<=5; i++) {
+                    starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="criterion-header">
+                        <input type="text" class="input-text" style="width: 50%; font-weight: bold; background: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 5px;" value="${crit.name}">
+                        <div class="stars">${starsHtml}</div>
+                        <button class="btn-icon">🗑</button>
+                    </div>
+                    <textarea class="input-text" placeholder="Notizen...">${crit.notes}</textarea>
+                `;
+
+                // Bind Name Change
+                const nameInput = card.querySelector('input');
+                nameInput.oninput = (e) => { state.movieForm.criteria[index].name = e.target.value; };
+
+                // Bind Star Clicks
+                const starElements = card.querySelectorAll('.star');
+                starElements.forEach(s => {
+                    s.onclick = (e) => {
+                        const rating = parseInt(e.target.getAttribute('data-idx'));
+                        state.movieForm.criteria[index].stars = rating;
+                        renderEditorCriteria(); // Re-render to update stars
+                    };
+                });
+
+                // Bind Notes
+                const notesInput = card.querySelector('textarea');
+                notesInput.oninput = (e) => { state.movieForm.criteria[index].notes = e.target.value; };
+
+                // Bind Delete
+                const delBtn = card.querySelector('.btn-icon');
+                delBtn.onclick = () => {
+                    state.movieForm.criteria.splice(index, 1);
+                    renderEditorCriteria();
+                };
+
+                container.appendChild(card);
+            });
+        }
+
+        function validateMovieForm() {
+            saveBtn.disabled = state.movieForm.title.trim().length === 0;
+        }
+
+        saveBtn.onclick = async () => {
+            if (saveBtn.disabled) return;
+            const data = {
+                title: state.movieForm.title,
+                imageData: state.movieForm.imageData,
+                criteria: state.movieForm.criteria,
+                watchedDate: state.movieForm.watchedDate,
+                tabID: state.movieForm.targetTabId,
+                dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
+            };
+
+            if (state.editingMovieId) {
+                // Remove undefined fields for update
+                if(data.dateAdded === undefined) delete data.dateAdded;
+                await updateDoc(doc(db, "movies", state.editingMovieId), data);
+            } else {
+                await addDoc(collection(db, "movies"), data);
+            }
+            DOM.movieModal.classList.remove('active');
+        };
+
+        // ==========================================
+        // 7. SIMPLE MODAL (Tab / Category Creator)
+        // ==========================================
+        document.getElementById('newCategoryBtn').onclick = () => openSimpleModal('Category', null);
+        document.getElementById('cancelSimpleModalBtn').onclick = () => DOM.simpleModal.classList.remove('active');
+        
+        function openSimpleModal(type, item) {
+            const titleEl = document.getElementById('simpleModalTitle');
+            const bodyEl = document.getElementById('simpleModalBody');
+            const saveBtn = document.getElementById('saveSimpleModalBtn');
+            
+            titleEl.innerText = type === 'Tab' ? 'Neuer Tab' : 'Neue Kategorie';
+            
+            if (type === 'Tab') {
+                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
+                saveBtn.onclick = async () => {
+                    const val = document.getElementById('tabNameInput').value.trim();
+                    if(val) {
+                        await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
+                        DOM.simpleModal.classList.remove('active');
+                    }
+                };
+            } else if (type === 'Category') {
+                bodyEl.innerHTML = `
+                    <input type="text" id="catNameInput" class="input-text" placeholder="Name (z.B. Horror)" style="margin-bottom: 10px;">
+                    <textarea id="catCriteriaInput" class="input-text" placeholder="Kriterien (durch Komma getrennt) z.B. Gruselfaktor, Story, Effekte"></textarea>
+                `;
+                saveBtn.onclick = async () => {
+                    const name = document.getElementById('catNameInput').value.trim();
+                    const criteriaStr = document.getElementById('catCriteriaInput').value;
+                    const criteria = criteriaStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    
+                    if(name && criteria.length > 0) {
+                        const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
+                        state.movieForm.selectedCategoryId = newCatRef.id;
+                        DOM.simpleModal.classList.remove('active');
+                    }
+                };
+            }
+            DOM.simpleModal.classList.add('active');
+        }
+
+    </script>
+</body>
+</html>
