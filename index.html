@@ -321,28 +321,41 @@
         // ==========================================
         // 4. FIREBASE LISTENERS (REALTIME SYNC)
         // ==========================================
-        onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), (snapshot) => {
-            state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (state.tabs.length === 0) setupDefaults(); // Create defaults if empty
-            if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
-            renderTabs(); renderMovies();
-        });
+        onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
+            (snapshot) => {
+                state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (state.tabs.length === 0) setupDefaults(); // Create defaults if empty
+                if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
+                renderTabs(); renderMovies();
+            },
+            (error) => { console.error("Firebase Fehler (Tabs):", error); alert("Fehler beim Laden der Tabs: " + error.message); }
+        );
 
-        onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), (snapshot) => {
-            state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (state.movieForm.targetTabId) renderEditorCategories();
-        });
+        onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
+            (snapshot) => {
+                state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (state.movieForm.targetTabId) renderEditorCategories();
+            },
+            (error) => { console.error("Firebase Fehler (Kategorien):", error); }
+        );
 
-        onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), (snapshot) => {
-            state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderMovies();
-        });
+        onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), 
+            (snapshot) => {
+                state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMovies();
+            },
+            (error) => { console.error("Firebase Fehler (Filme):", error); }
+        );
 
         async function setupDefaults() {
-            await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
-            await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
-            await addDoc(collection(db, "categories"), { name: "Action", criteriaNames: ["Spannung & Pacing", "Effekte", "Choreografie"], orderIndex: 0 });
-            await addDoc(collection(db, "categories"), { name: "Drama", criteriaNames: ["Schauspiel", "Drehbuch", "Emotionen"], orderIndex: 1 });
+            try {
+                await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
+                await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
+                await addDoc(collection(db, "categories"), { name: "Action", criteriaNames: ["Spannung & Pacing", "Effekte", "Choreografie"], orderIndex: 0 });
+                await addDoc(collection(db, "categories"), { name: "Drama", criteriaNames: ["Schauspiel", "Drehbuch", "Emotionen"], orderIndex: 1 });
+            } catch (error) {
+                 console.error("Fehler beim Erstellen der Standardwerte:", error);
+            }
         }
 
         // ==========================================
@@ -636,6 +649,12 @@
 
         saveBtn.onclick = async () => {
             if (saveBtn.disabled) return;
+            
+            // Lade-Status anzeigen
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Speichert...";
+            saveBtn.disabled = true;
+
             const data = {
                 title: state.movieForm.title,
                 imageData: state.movieForm.imageData,
@@ -645,14 +664,22 @@
                 dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
             };
 
-            if (state.editingMovieId) {
-                // Remove undefined fields for update
-                if(data.dateAdded === undefined) delete data.dateAdded;
-                await updateDoc(doc(db, "movies", state.editingMovieId), data);
-            } else {
-                await addDoc(collection(db, "movies"), data);
+            try {
+                if (state.editingMovieId) {
+                    if(data.dateAdded === undefined) delete data.dateAdded;
+                    await updateDoc(doc(db, "movies", state.editingMovieId), data);
+                } else {
+                    await addDoc(collection(db, "movies"), data);
+                }
+                DOM.movieModal.classList.remove('active');
+            } catch (error) {
+                console.error("Fehler beim Speichern des Films:", error);
+                alert("Der Film konnte nicht gespeichert werden: " + error.message);
+            } finally {
+                // Button wiederherstellen
+                saveBtn.innerText = originalText;
+                validateMovieForm(); // Setzt den disabled-Status korrekt zurück
             }
-            DOM.movieModal.classList.remove('active');
         };
 
         // ==========================================
@@ -673,8 +700,15 @@
                 saveBtn.onclick = async () => {
                     const val = document.getElementById('tabNameInput').value.trim();
                     if(val) {
-                        await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
-                        DOM.simpleModal.classList.remove('active');
+                        try {
+                            saveBtn.disabled = true;
+                            await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
+                            DOM.simpleModal.classList.remove('active');
+                        } catch (error) {
+                            alert("Fehler beim Erstellen des Tabs: " + error.message);
+                        } finally {
+                            saveBtn.disabled = false;
+                        }
                     }
                 };
             } else if (type === 'Category') {
@@ -688,9 +722,16 @@
                     const criteria = criteriaStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
                     
                     if(name && criteria.length > 0) {
-                        const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
-                        state.movieForm.selectedCategoryId = newCatRef.id;
-                        DOM.simpleModal.classList.remove('active');
+                        try {
+                            saveBtn.disabled = true;
+                            const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
+                            state.movieForm.selectedCategoryId = newCatRef.id;
+                            DOM.simpleModal.classList.remove('active');
+                        } catch (error) {
+                            alert("Fehler beim Erstellen der Kategorie: " + error.message);
+                        } finally {
+                            saveBtn.disabled = false;
+                        }
                     }
                 };
             }
