@@ -336,50 +336,77 @@
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { document.body.style.overflow = ''; }
 
-        // 1. Hilfsfunktion für langes Drücken (verhindert auch unbeabsichtigte Klicks)
+        // 1. Hilfsfunktion für langes Drücken & Drag-and-Drop Kompatibilität
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer;
-            let startT = 0;
-            let longPressFired = false;
+            let isDragging = false;
+            let ignoreNextClick = false;
 
             const startPress = (e) => {
-                startT = Date.now();
-                longPressFired = false;
+                // Status zurücksetzen, sobald der Finger aufgesetzt wird
+                ignoreNextClick = false; 
+                isDragging = false;
+
                 pressTimer = window.setTimeout(() => {
-                    longPressFired = true;
-                    if(confirm("Möchtest du dieses Element wirklich löschen?")) {
-                        deleteCallback();
-                    }
-                }, 600); // 600ms für Long Press
+                    if (isDragging) return; // Abbrechen, falls der Nutzer bereits zieht
+                    
+                    ignoreNextClick = true; // Den unmittelbar folgenden Klick zwingend blockieren
+                    
+                    // Ein minimaler Delay gibt dem Browser Zeit, die Touch-Events sauber 
+                    // abzuschließen, bevor das blockierende Confirm-Fenster den Prozess einfriert.
+                    setTimeout(() => {
+                        if(confirm("Möchtest du dieses Element wirklich löschen?")) {
+                            deleteCallback();
+                        }
+                    }, 10);
+                    
+                }, 800); // Zeit auf 800ms erhöht, um dem "Drag"-Event den Vorrang zu geben
             };
 
-            const cancelPress = () => clearTimeout(pressTimer);
+            const cancelPress = () => {
+                if (pressTimer) clearTimeout(pressTimer);
+            };
 
-            // Touch Events
+            // Touch & Maus Events
             element.addEventListener('touchstart', startPress, { passive: true });
             element.addEventListener('touchend', cancelPress);
-            element.addEventListener('touchmove', cancelPress);
+            // Sobald sich der Finger bewegt (wischen/ziehen), den Lösch-Timer sofort abbrechen!
+            element.addEventListener('touchmove', cancelPress, { passive: true });
             
-            // Mouse Events
             element.addEventListener('mousedown', startPress);
             element.addEventListener('mouseup', cancelPress);
             element.addEventListener('mouseleave', cancelPress);
 
-            // Verhindert das Kontextmenü (Rechtsklick) und nutzt es als Alternative
+            // --- HTML5 Drag & Drop Erkennung ---
+            // Wenn das Element gegriffen und gezogen wird, bricht das den Lösch-Timer sofort ab.
+            element.addEventListener('dragstart', (e) => {
+                isDragging = true;
+                cancelPress();
+            });
+            element.addEventListener('dragend', (e) => {
+                isDragging = false;
+                setTimeout(() => { ignoreNextClick = false; }, 100);
+            });
+
+            // Rechtsklick-Fallback (wird auf einigen Geräten bei Long Press gefeuert)
             element.oncontextmenu = (e) => { 
                 e.preventDefault(); 
-                longPressFired = true; 
+                cancelPress();
+                ignoreNextClick = true;
                 if(confirm("Möchtest du dieses Element wirklich löschen?")) deleteCallback(); 
             };
 
-            // Click Handler, der prüft, ob es ein Long Press war
+            // Klick-Logik, die sich merkt, ob vorher abgebrochen wurde
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
-                    // Wenn wir markiert haben, dass es ein Long Press war, blockieren wir den normalen Klick
-                    if (longPressFired || (Date.now() - startT > 550)) {
+                    cancelPress();
+                    
+                    // Wenn ignoreNextClick true ist (weil das Lösch-Menü offen war),
+                    // wird der Klick hier komplett vernichtet.
+                    if (ignoreNextClick) {
                         e.preventDefault();
                         e.stopPropagation();
-                        longPressFired = false;
+                        ignoreNextClick = false; // Zurücksetzen für den nächsten regulären Tap
                         return false;
                     }
                     clickCallback(e);
