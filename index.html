@@ -36,6 +36,20 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
+        /* 1. Verhindert das Markieren von Text beim langen Drücken */
+        .no-select {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        /* 2. Visuelle Anzeige für Drag & Drop */
+        .drag-over {
+            background-color: var(--border-color) !important;
+            border-radius: 8px;
+            opacity: 0.7;
+        }
+
         /* Typography & Layout */
         h1, h2, h3, p { margin: 0; }
         .header {
@@ -61,14 +75,14 @@
         .tab-item {
             cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
             font-weight: 500; color: var(--text-primary); white-space: nowrap;
-            user-select: none; position: relative;
+            position: relative; padding: 5px 10px; transition: background-color 0.2s;
         }
         .tab-item.active { color: var(--accent-color); font-weight: 700; }
         .tab-item.active::after {
             content: ''; width: 100%; height: 3px; background-color: var(--accent-color);
             border-radius: 2px; position: absolute; bottom: -5px;
         }
-        .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; }
+        .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; padding: 5px; }
 
         /* Movie List */
         .movie-list { padding: 20px; display: grid; gap: 15px; }
@@ -95,7 +109,7 @@
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); display: none; z-index: 1000;
-            justify-content: center; align-items: flex-end; /* Mobile friendly bottom sheet */
+            justify-content: center; align-items: flex-end;
         }
         .modal-overlay.active { display: flex; }
         .modal-content {
@@ -122,13 +136,28 @@
 
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
 
-        /* Editor specific styles */
+        /* Form Inputs */
         .form-group { margin-bottom: 20px; }
         .input-text {
             width: 100%; padding: 12px 15px; border-radius: 10px; border: none;
             background-color: var(--surface-color); color: var(--text-primary);
             font-size: 16px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
+
+        /* 4. Fix für das Datumsfeld (Verhindert doppelte UI-Elemente) */
+        input[type="date"] {
+            box-sizing: border-box;
+            appearance: none;
+            -webkit-appearance: none;
+            background-color: var(--surface-color);
+            position: relative;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent; bottom: 0; color: transparent; 
+            cursor: pointer; height: auto; left: 0; position: absolute; 
+            right: 0; top: 0; width: auto;
+        }
+
         .poster-picker {
             width: 100%; aspect-ratio: 2/3; background-color: rgba(0, 122, 255, 0.1);
             border-radius: 12px; display: flex; flex-direction: column; align-items: center;
@@ -156,7 +185,7 @@
         .criterion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .stars { display: flex; gap: 5px; font-size: 20px; color: var(--border-color); cursor: pointer; }
         .star.filled { color: var(--star-color); }
-        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; }
+        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;}
         textarea.input-text { resize: vertical; min-height: 60px; font-size: 14px; }
 
         /* Small utilities */
@@ -223,7 +252,7 @@
                         
                         <div class="flex-row">
                             <div class="section-title">Kategorie (Preset)</div>
-                            <button class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Kategorie</button>
+                            <button class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Vorlage</button>
                         </div>
                         <div class="category-scroll" id="categoryList">
                             <!-- Categories injected by JS -->
@@ -279,37 +308,22 @@
             appId: "1:494393371345:web:076bdefc2b0601fc7e33f0"
         };
 
-
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ==========================================
-        // 2. STATE MANAGEMENT
-        // ==========================================
         let state = {
             tabs: [], categories: [], movies: [],
-            currentTabId: null,
-            editingMovieId: null,
-            movieForm: {
-                title: "", imageData: null, watchedDate: null,
-                targetTabId: null, selectedCategoryId: null, criteria: []
-            }
+            currentTabId: null, editingMovieId: null,
+            movieForm: { title: "", imageData: null, watchedDate: null, targetTabId: null, selectedCategoryId: null, criteria: [] }
         };
 
-        // DOM Elements
         const DOM = {
-            tabBar: document.getElementById('tabBar'),
-            movieList: document.getElementById('movieList'),
-            themeBtn: document.getElementById('themeToggleBtn'),
-            // Modals
-            movieModal: document.getElementById('movieModal'),
+            tabBar: document.getElementById('tabBar'), movieList: document.getElementById('movieList'),
+            themeBtn: document.getElementById('themeToggleBtn'), movieModal: document.getElementById('movieModal'),
             simpleModal: document.getElementById('simpleModal')
         };
 
-        // ==========================================
-        // 3. THEME MANAGEMENT
-        // ==========================================
+        // Theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
         DOM.themeBtn.onclick = () => {
@@ -318,17 +332,70 @@
             localStorage.setItem('theme', newTheme);
         };
 
-        // ==========================================
-        // 4. FIREBASE LISTENERS (REALTIME SYNC)
-        // ==========================================
+        // 5. Hilfsfunktionen zum Blockieren des Scrollens im Hintergrund
+        function lockScroll() { document.body.style.overflow = 'hidden'; }
+        function unlockScroll() { document.body.style.overflow = ''; }
+
+        // 1. Hilfsfunktion für langes Drücken (verhindert auch unbeabsichtigte Klicks)
+        function setupLongPress(element, deleteCallback, clickCallback = null) {
+            let pressTimer;
+            let startT = 0;
+            let longPressFired = false;
+
+            const startPress = (e) => {
+                startT = Date.now();
+                longPressFired = false;
+                pressTimer = window.setTimeout(() => {
+                    longPressFired = true;
+                    if(confirm("Möchtest du dieses Element wirklich löschen?")) {
+                        deleteCallback();
+                    }
+                }, 600); // 600ms für Long Press
+            };
+
+            const cancelPress = () => clearTimeout(pressTimer);
+
+            // Touch Events
+            element.addEventListener('touchstart', startPress, { passive: true });
+            element.addEventListener('touchend', cancelPress);
+            element.addEventListener('touchmove', cancelPress);
+            
+            // Mouse Events
+            element.addEventListener('mousedown', startPress);
+            element.addEventListener('mouseup', cancelPress);
+            element.addEventListener('mouseleave', cancelPress);
+
+            // Verhindert das Kontextmenü (Rechtsklick) und nutzt es als Alternative
+            element.oncontextmenu = (e) => { 
+                e.preventDefault(); 
+                longPressFired = true; 
+                if(confirm("Möchtest du dieses Element wirklich löschen?")) deleteCallback(); 
+            };
+
+            // Click Handler, der prüft, ob es ein Long Press war
+            if (clickCallback) {
+                element.addEventListener('click', (e) => {
+                    // Wenn wir markiert haben, dass es ein Long Press war, blockieren wir den normalen Klick
+                    if (longPressFired || (Date.now() - startT > 550)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        longPressFired = false;
+                        return false;
+                    }
+                    clickCallback(e);
+                });
+            }
+        }
+
+        // Firebase Sync
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
             (snapshot) => {
                 state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.tabs.length === 0) setupDefaults(); // Create defaults if empty
+                if (state.tabs.length === 0) setupDefaults();
                 if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
                 renderTabs(); renderMovies();
             },
-            (error) => { console.error("Firebase Fehler (Tabs):", error); alert("Fehler beim Laden der Tabs: " + error.message); }
+            (error) => { console.error(error); alert("Fehler beim Laden der Tabs: " + error.message); }
         );
 
         onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
@@ -336,7 +403,7 @@
                 state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (state.movieForm.targetTabId) renderEditorCategories();
             },
-            (error) => { console.error("Firebase Fehler (Kategorien):", error); }
+            (error) => { console.error(error); }
         );
 
         onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), 
@@ -344,68 +411,63 @@
                 state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderMovies();
             },
-            (error) => { console.error("Firebase Fehler (Filme):", error); }
+            (error) => { console.error(error); }
         );
 
         async function setupDefaults() {
             try {
                 await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
                 await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
-                await addDoc(collection(db, "categories"), { name: "Action", criteriaNames: ["Spannung & Pacing", "Effekte", "Choreografie"], orderIndex: 0 });
-                await addDoc(collection(db, "categories"), { name: "Drama", criteriaNames: ["Schauspiel", "Drehbuch", "Emotionen"], orderIndex: 1 });
-            } catch (error) {
-                 console.error("Fehler beim Erstellen der Standardwerte:", error);
-            }
+                await addDoc(collection(db, "categories"), { name: "Standard", criteriaNames: ["Spannung", "Story", "Effekte"], orderIndex: 0 });
+            } catch (e) {}
         }
 
-        // ==========================================
-        // 5. RENDERING: MAIN VIEW
-        // ==========================================
+        // Render Tabs
         function renderTabs() {
             DOM.tabBar.innerHTML = '';
             state.tabs.forEach((tab, index) => {
                 const el = document.createElement('div');
-                el.className = `tab-item ${state.currentTabId === tab.id ? 'active' : ''}`;
+                el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
                 el.innerText = tab.name;
-                el.draggable = true;
                 
-                // Select Tab
-                el.onclick = () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); };
-                
-                // Context menu (Long press / Right click for edit/delete)
-                el.oncontextmenu = (e) => {
-                    e.preventDefault();
-                    if(confirm(`Möchtest du den Tab "${tab.name}" löschen?`)) {
+                // 1. Long Press & Click einrichten
+                setupLongPress(
+                    el, 
+                    () => { // Delete action
                         deleteDoc(doc(db, "tabs", tab.id));
                         if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
+                    },
+                    () => { // Click action
+                        state.currentTabId = tab.id; renderTabs(); renderMovies(); 
                     }
-                };
+                );
 
-                // Drag & Drop
+                // 2. Drag & Drop mit visueller Anzeige
+                el.draggable = true;
                 el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                el.ondragover = (e) => e.preventDefault();
+                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragleave = () => { el.classList.remove('drag-over'); };
                 el.ondrop = async (e) => {
                     e.preventDefault();
+                    el.classList.remove('drag-over');
                     const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    const toIndex = index;
-                    if (fromIndex !== toIndex) {
+                    if (fromIndex !== index) {
                         let newTabs = [...state.tabs];
                         const [moved] = newTabs.splice(fromIndex, 1);
-                        newTabs.splice(toIndex, 0, moved);
-                        // Update order in DB
+                        newTabs.splice(index, 0, moved);
                         newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
                     }
                 };
                 DOM.tabBar.appendChild(el);
             });
 
-            // Add Tab Button
             const addBtn = document.createElement('div');
-            addBtn.className = 'tab-item add-tab-btn'; addBtn.innerText = '⊕';
+            addBtn.className = 'tab-item add-tab-btn no-select'; addBtn.innerText = '⊕';
             addBtn.onclick = () => openSimpleModal('Tab', null);
             DOM.tabBar.appendChild(addBtn);
         }
 
+        // Render Movies
         function renderMovies() {
             DOM.movieList.innerHTML = '';
             const filtered = state.movies.filter(m => m.tabID === state.currentTabId);
@@ -421,7 +483,6 @@
             }
 
             filtered.forEach(movie => {
-                // Calculate average
                 const rated = movie.criteria.filter(c => c.stars > 0);
                 const avg = rated.length ? (rated.reduce((s, c) => s + c.stars, 0) / rated.length).toFixed(1) : '0.0';
                 
@@ -434,7 +495,7 @@
                     : `🎬`;
 
                 const el = document.createElement('div');
-                el.className = 'movie-row';
+                el.className = 'movie-row no-select'; // Textmarkierung verhindern
                 el.innerHTML = `
                     <div class="movie-poster">${imgHtml}</div>
                     <div class="movie-info">
@@ -443,36 +504,36 @@
                         <div class="movie-date">${dateStr}</div>
                     </div>
                 `;
-                el.onclick = () => openMovieEditor(movie);
+                
+                // 1. Long Press & Click einrichten (Löschen & Öffnen)
+                setupLongPress(
+                    el,
+                    () => { deleteDoc(doc(db, "movies", movie.id)); },
+                    () => { openMovieEditor(movie); }
+                );
+
                 DOM.movieList.appendChild(el);
             });
         }
 
-        // ==========================================
-        // 6. MOVIE EDITOR MODAL
-        // ==========================================
+        // Movie Editor Logic
         const titleInput = document.getElementById('movieTitleInput');
         const saveBtn = document.getElementById('saveMovieBtn');
         const posterInput = document.getElementById('posterInput');
         const posterPreview = document.getElementById('posterPreview');
         const dateInput = document.getElementById('watchedDateInput');
 
-        titleInput.addEventListener('input', (e) => {
-            state.movieForm.title = e.target.value;
-            validateMovieForm();
-        });
-        
+        titleInput.addEventListener('input', (e) => { state.movieForm.title = e.target.value; validateMovieForm(); });
         dateInput.addEventListener('change', (e) => { state.movieForm.watchedDate = e.target.value; });
         document.getElementById('clearDateBtn').onclick = () => { dateInput.value = ''; state.movieForm.watchedDate = null; };
 
         document.getElementById('addMovieBtn').onclick = () => openMovieEditor(null);
-        document.getElementById('cancelMovieBtn').onclick = () => DOM.movieModal.classList.remove('active');
+        document.getElementById('cancelMovieBtn').onclick = () => { DOM.movieModal.classList.remove('active'); unlockScroll(); };
         document.getElementById('addCriterionBtn').onclick = () => {
             state.movieForm.criteria.push({ id: Date.now().toString(), name: "Neues Kriterium", stars: 0, notes: "" });
             renderEditorCriteria();
         };
 
-        // Poster Handling (Base64 + Resize)
         posterInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -480,7 +541,6 @@
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    // Downscale to max 800px width/height to save DB space
                     const canvas = document.createElement('canvas');
                     const MAX_SIZE = 800;
                     let w = img.width, h = img.height;
@@ -503,43 +563,34 @@
         });
 
         document.getElementById('removePosterBtn').onclick = () => {
-            state.movieForm.imageData = null;
-            posterPreview.src = '';
-            posterPreview.style.display = 'none';
-            document.getElementById('posterPlaceholder').style.display = 'block';
-            document.getElementById('removePosterBtn').style.display = 'none';
+            state.movieForm.imageData = null; posterPreview.src = ''; posterPreview.style.display = 'none';
+            document.getElementById('posterPlaceholder').style.display = 'block'; document.getElementById('removePosterBtn').style.display = 'none';
         };
 
         function openMovieEditor(movie) {
+            lockScroll(); // 5. Hintergrundscrollen blockieren
             state.editingMovieId = movie ? movie.id : null;
             document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
             
-            // Reset & Populate Form State
             if (movie) {
-                state.movieForm = JSON.parse(JSON.stringify(movie)); // Deep copy
+                state.movieForm = JSON.parse(JSON.stringify(movie));
             } else {
                 state.movieForm = {
-                    title: "", imageData: null, 
-                    watchedDate: new Date().toISOString().split('T')[0],
+                    title: "", imageData: null, watchedDate: new Date().toISOString().split('T')[0],
                     targetTabId: state.currentTabId, selectedCategoryId: state.categories[0]?.id,
                     criteria: state.categories[0] ? state.categories[0].criteriaNames.map(n => ({ id: Math.random().toString(), name: n, stars: 0, notes: "" })) : []
                 };
             }
 
-            // Bind UI
             titleInput.value = state.movieForm.title;
             dateInput.value = state.movieForm.watchedDate || '';
             
             if (state.movieForm.imageData) {
-                posterPreview.src = state.movieForm.imageData;
-                posterPreview.style.display = 'block';
-                document.getElementById('posterPlaceholder').style.display = 'none';
-                document.getElementById('removePosterBtn').style.display = 'block';
+                posterPreview.src = state.movieForm.imageData; posterPreview.style.display = 'block';
+                document.getElementById('posterPlaceholder').style.display = 'none'; document.getElementById('removePosterBtn').style.display = 'block';
             } else {
-                posterPreview.src = '';
-                posterPreview.style.display = 'none';
-                document.getElementById('posterPlaceholder').style.display = 'block';
-                document.getElementById('removePosterBtn').style.display = 'none';
+                posterPreview.src = ''; posterPreview.style.display = 'none';
+                document.getElementById('posterPlaceholder').style.display = 'block'; document.getElementById('removePosterBtn').style.display = 'none';
             }
 
             const delBtn = document.getElementById('deleteMovieBtn');
@@ -549,6 +600,7 @@
                     if(confirm("Diesen Film wirklich löschen?")) {
                         deleteDoc(doc(db, "movies", movie.id));
                         DOM.movieModal.classList.remove('active');
+                        unlockScroll();
                     }
                 };
             } else { delBtn.style.display = 'none'; }
@@ -562,28 +614,42 @@
         function renderEditorCategories() {
             const list = document.getElementById('categoryList');
             list.innerHTML = '';
-            state.categories.forEach(cat => {
+            state.categories.forEach((cat, index) => {
                 const el = document.createElement('div');
-                el.className = `category-pill ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
+                el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
                 el.innerText = cat.name;
                 
-                el.onclick = () => {
-                    state.movieForm.selectedCategoryId = cat.id;
-                    // Merge criteria
-                    let newCriteria = [];
-                    cat.criteriaNames.forEach(name => {
-                        const existing = state.movieForm.criteria.find(c => c.name === name);
-                        newCriteria.push(existing ? existing : { id: Math.random().toString(), name: name, stars: 0, notes: "" });
-                    });
-                    state.movieForm.criteria = newCriteria;
-                    renderEditorCategories();
-                    renderEditorCriteria();
-                };
+                // 1. Long Press & Click für Vorlagen
+                setupLongPress(
+                    el,
+                    () => { deleteDoc(doc(db, "categories", cat.id)); },
+                    () => {
+                        state.movieForm.selectedCategoryId = cat.id;
+                        let newCriteria = [];
+                        cat.criteriaNames.forEach(name => {
+                            const existing = state.movieForm.criteria.find(c => c.name === name);
+                            newCriteria.push(existing ? existing : { id: Math.random().toString(), name: name, stars: 0, notes: "" });
+                        });
+                        state.movieForm.criteria = newCriteria;
+                        renderEditorCategories();
+                        renderEditorCriteria();
+                    }
+                );
 
-                el.oncontextmenu = (e) => {
+                // 2. Drag & Drop auch für Vorlagen!
+                el.draggable = true;
+                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragleave = () => { el.classList.remove('drag-over'); };
+                el.ondrop = async (e) => {
                     e.preventDefault();
-                    if(confirm(`Kategorie '${cat.name}' aus Vorlagen löschen? (Bereits erstellte Filme behalten die Kriterien)`)){
-                        deleteDoc(doc(db, "categories", cat.id));
+                    el.classList.remove('drag-over');
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (fromIndex !== index) {
+                        let newCats = [...state.categories];
+                        const [moved] = newCats.splice(fromIndex, 1);
+                        newCats.splice(index, 0, moved);
+                        newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
                     }
                 };
 
@@ -594,16 +660,11 @@
         function renderEditorCriteria() {
             const container = document.getElementById('criteriaContainer');
             container.innerHTML = '';
-            
             state.movieForm.criteria.forEach((crit, index) => {
                 const card = document.createElement('div');
                 card.className = 'criterion-card';
-                
-                // Star generation
                 let starsHtml = '';
-                for(let i=1; i<=5; i++) {
-                    starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
-                }
+                for(let i=1; i<=5; i++) starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
 
                 card.innerHTML = `
                     <div class="criterion-header">
@@ -614,86 +675,51 @@
                     <textarea class="input-text" placeholder="Notizen...">${crit.notes}</textarea>
                 `;
 
-                // Bind Name Change
-                const nameInput = card.querySelector('input');
-                nameInput.oninput = (e) => { state.movieForm.criteria[index].name = e.target.value; };
-
-                // Bind Star Clicks
-                const starElements = card.querySelectorAll('.star');
-                starElements.forEach(s => {
-                    s.onclick = (e) => {
-                        const rating = parseInt(e.target.getAttribute('data-idx'));
-                        state.movieForm.criteria[index].stars = rating;
-                        renderEditorCriteria(); // Re-render to update stars
-                    };
+                card.querySelector('input').oninput = (e) => { state.movieForm.criteria[index].name = e.target.value; };
+                card.querySelectorAll('.star').forEach(s => {
+                    s.onclick = (e) => { state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx')); renderEditorCriteria(); };
                 });
-
-                // Bind Notes
-                const notesInput = card.querySelector('textarea');
-                notesInput.oninput = (e) => { state.movieForm.criteria[index].notes = e.target.value; };
-
-                // Bind Delete
-                const delBtn = card.querySelector('.btn-icon');
-                delBtn.onclick = () => {
-                    state.movieForm.criteria.splice(index, 1);
-                    renderEditorCriteria();
-                };
-
+                card.querySelector('textarea').oninput = (e) => { state.movieForm.criteria[index].notes = e.target.value; };
+                card.querySelector('.btn-icon').onclick = () => { state.movieForm.criteria.splice(index, 1); renderEditorCriteria(); };
                 container.appendChild(card);
             });
         }
 
-        function validateMovieForm() {
-            saveBtn.disabled = state.movieForm.title.trim().length === 0;
-        }
+        function validateMovieForm() { saveBtn.disabled = state.movieForm.title.trim().length === 0; }
 
         saveBtn.onclick = async () => {
             if (saveBtn.disabled) return;
-            
-            // Lade-Status anzeigen
-            const originalText = saveBtn.innerText;
-            saveBtn.innerText = "Speichert...";
-            saveBtn.disabled = true;
+            const originalText = saveBtn.innerText; saveBtn.innerText = "Speichert..."; saveBtn.disabled = true;
 
             const data = {
-                title: state.movieForm.title,
-                imageData: state.movieForm.imageData,
-                criteria: state.movieForm.criteria,
-                watchedDate: state.movieForm.watchedDate,
-                tabID: state.movieForm.targetTabId,
-                dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
+                title: state.movieForm.title, imageData: state.movieForm.imageData,
+                criteria: state.movieForm.criteria, watchedDate: state.movieForm.watchedDate,
+                tabID: state.movieForm.targetTabId, dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
             };
 
             try {
                 if (state.editingMovieId) {
                     if(data.dateAdded === undefined) delete data.dateAdded;
                     await updateDoc(doc(db, "movies", state.editingMovieId), data);
-                } else {
-                    await addDoc(collection(db, "movies"), data);
-                }
+                } else { await addDoc(collection(db, "movies"), data); }
                 DOM.movieModal.classList.remove('active');
+                unlockScroll();
             } catch (error) {
-                console.error("Fehler beim Speichern des Films:", error);
-                alert("Der Film konnte nicht gespeichert werden: " + error.message);
-            } finally {
-                // Button wiederherstellen
-                saveBtn.innerText = originalText;
-                validateMovieForm(); // Setzt den disabled-Status korrekt zurück
-            }
+                console.error(error); alert("Der Film konnte nicht gespeichert werden: " + error.message);
+            } finally { saveBtn.innerText = originalText; validateMovieForm(); }
         };
 
-        // ==========================================
-        // 7. SIMPLE MODAL (Tab / Category Creator)
-        // ==========================================
+        // Simple Modals (Tabs / Categories)
         document.getElementById('newCategoryBtn').onclick = () => openSimpleModal('Category', null);
-        document.getElementById('cancelSimpleModalBtn').onclick = () => DOM.simpleModal.classList.remove('active');
+        document.getElementById('cancelSimpleModalBtn').onclick = () => { DOM.simpleModal.classList.remove('active'); unlockScroll(); };
         
         function openSimpleModal(type, item) {
+            lockScroll(); // 5. Hintergrundscrollen blockieren
             const titleEl = document.getElementById('simpleModalTitle');
             const bodyEl = document.getElementById('simpleModalBody');
             const saveBtn = document.getElementById('saveSimpleModalBtn');
             
-            titleEl.innerText = type === 'Tab' ? 'Neuer Tab' : 'Neue Kategorie';
+            titleEl.innerText = type === 'Tab' ? 'Neuer Tab' : 'Neue Vorlage';
             
             if (type === 'Tab') {
                 bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
@@ -704,22 +730,41 @@
                             saveBtn.disabled = true;
                             await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
                             DOM.simpleModal.classList.remove('active');
-                        } catch (error) {
-                            alert("Fehler beim Erstellen des Tabs: " + error.message);
-                        } finally {
-                            saveBtn.disabled = false;
-                        }
+                            unlockScroll();
+                        } catch (error) { alert("Fehler: " + error.message); } 
+                        finally { saveBtn.disabled = false; }
                     }
                 };
             } else if (type === 'Category') {
+                // 3. Einzelne Felder für neue Kriterien
                 bodyEl.innerHTML = `
-                    <input type="text" id="catNameInput" class="input-text" placeholder="Name (z.B. Horror)" style="margin-bottom: 10px;">
-                    <textarea id="catCriteriaInput" class="input-text" placeholder="Kriterien (durch Komma getrennt) z.B. Gruselfaktor, Story, Effekte"></textarea>
+                    <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" style="margin-bottom: 20px;">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
+                    <div id="newCatCriteriaContainer">
+                        <div class="flex-row" style="margin-bottom: 10px; gap: 10px;">
+                            <input type="text" class="input-text cat-crit-input" placeholder="Erstes Kriterium (z.B. Spannung)">
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
                 `;
+                
+                document.getElementById('addCatCritBtn').onclick = () => {
+                    const cont = document.getElementById('newCatCriteriaContainer');
+                    const div = document.createElement('div');
+                    div.className = 'flex-row';
+                    div.style.marginBottom = '10px';
+                    div.style.gap = '10px';
+                    div.innerHTML = `
+                        <input type="text" class="input-text cat-crit-input" placeholder="Neues Kriterium">
+                        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="padding: 10px;">🗑</button>
+                    `;
+                    cont.appendChild(div);
+                };
+
                 saveBtn.onclick = async () => {
                     const name = document.getElementById('catNameInput').value.trim();
-                    const criteriaStr = document.getElementById('catCriteriaInput').value;
-                    const criteria = criteriaStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    const inputs = document.querySelectorAll('.cat-crit-input');
+                    const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
                     
                     if(name && criteria.length > 0) {
                         try {
@@ -727,17 +772,14 @@
                             const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
                             state.movieForm.selectedCategoryId = newCatRef.id;
                             DOM.simpleModal.classList.remove('active');
-                        } catch (error) {
-                            alert("Fehler beim Erstellen der Kategorie: " + error.message);
-                        } finally {
-                            saveBtn.disabled = false;
-                        }
+                            unlockScroll();
+                        } catch (error) { alert("Fehler: " + error.message); } 
+                        finally { saveBtn.disabled = false; }
                     }
                 };
             }
             DOM.simpleModal.classList.add('active');
         }
-
     </script>
 </body>
 </html>
