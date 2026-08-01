@@ -96,7 +96,7 @@
             align-items: center; justify-content: center; color: var(--accent-color);
             font-size: 30px; overflow: hidden;
         }
-        .movie-poster img { width: 100%; height: 100%; object-fit: cover; }
+        .movie-poster img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
         .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
         .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
         .movie-rating { color: var(--star-color); font-weight: 600; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
@@ -282,6 +282,21 @@
         </div>
     </div>
 
+    <!-- Hinzugefügt: Eigenes Custom Delete Modal (blockiert Skripte NICHT) -->
+    <div class="modal-overlay" id="customDeleteModal" style="z-index: 2000;">
+        <div class="modal-content" style="height: auto; max-width: 320px; margin: auto; border-radius: 16px; background: var(--surface-color);">
+            <div class="modal-body" style="text-align: center; padding: 25px 20px;">
+                <div style="font-size: 40px; margin-bottom: 10px;">🗑️</div>
+                <h3 style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
+                    <button class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top: 0; flex: 1;">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script type="importmap">
       {
@@ -332,72 +347,66 @@
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { document.body.style.overflow = ''; }
 
-        // --- VERBESSERTE LONG PRESS LOGIK (Sicher gegen doppeltes Triggern und Drag-Hänger) ---
+        // --- Custom Delete Modal Logik ---
+        let activeDeleteAction = null;
+        const deleteModal = document.getElementById('customDeleteModal');
+        
+        function openDeleteModal(onConfirmCallback) {
+            activeDeleteAction = onConfirmCallback;
+            deleteModal.classList.add('active');
+        }
+        
+        document.getElementById('deleteModalCancel').onclick = () => {
+            deleteModal.classList.remove('active');
+            activeDeleteAction = null;
+        };
+        
+        document.getElementById('deleteModalConfirm').onclick = () => {
+            if (activeDeleteAction) activeDeleteAction();
+            deleteModal.classList.remove('active');
+            activeDeleteAction = null;
+        };
+
+        // --- NEUE PERFEKTE LONG PRESS LOGIK ---
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer;
             let startX = 0, startY = 0;
-            let ignoreNextClick = false;
             let hasMoved = false;
-            let actionTriggered = false; // Verhindert mehrfaches Auslösen (Lock)
+            let isModalTriggered = false;
 
             const startPress = (e) => {
-                if (actionTriggered) return;
-                ignoreNextClick = false;
-                hasMoved = false;
+                // Keine Aktion starten, wenn irgendein Modal offen ist
+                if (document.querySelector('.modal-overlay.active')) return;
                 
-                if (e.touches && e.touches.length > 0) {
-                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-                } else if (e.clientX !== undefined) {
-                    startX = e.clientX; startY = e.clientY;
-                }
+                hasMoved = false;
+                isModalTriggered = false;
+                
+                let touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX || 0; 
+                startY = touch.clientY || 0;
 
                 pressTimer = window.setTimeout(() => {
-                    if (hasMoved || actionTriggered) return;
-                    triggerDelete();
-                }, 1000); 
-            };
-
-            const triggerDelete = () => {
-                actionTriggered = true;
-                ignoreNextClick = true;
-
-                // 1. Zwinge den Browser, das Element "loszulassen", falls ein Drag im Hintergrund lief
-                const wasDraggable = element.draggable;
-                if (wasDraggable) element.draggable = false;
-                element.style.pointerEvents = 'none'; // Verhindert Interaktionen während der Dialog öffnet
-
-                // 2. Ein minimaler Delay gibt dem Browser Zeit, das "Loslassen" ins DOM zu übertragen
-                setTimeout(() => {
-                    if (confirm("Möchtest du dieses Element wirklich löschen?")) {
-                        deleteCallback();
-                    }
+                    if (hasMoved) return;
                     
-                    // 3. Nach Schließen des Dialogs wiederherstellen und Schloss aufheben
-                    setTimeout(() => {
-                        if (wasDraggable) element.draggable = true;
-                        element.style.pointerEvents = '';
-                        actionTriggered = false; // Wieder freigeben
-                        // ignoreNextClick lassen wir noch kurz aktiv, damit der "Abbrechen" Klick nicht sofort das Element öffnet
-                        setTimeout(() => { ignoreNextClick = false; }, 100);
-                    }, 300); // 300ms Cooldown schluckt verspätete Events (z.B. contextmenu beim Finger loslassen)
-                }, 50);
+                    isModalTriggered = true;
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    
+                    // Wir rufen unser sicheres HTML Modal auf! Kein Einfrieren des Browsers mehr.
+                    openDeleteModal(deleteCallback);
+                    
+                }, 800); // 800ms für Long Press
             };
 
             const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
 
             const checkMovement = (e) => {
-                if (actionTriggered) return; 
-                
-                let currentX = startX, currentY = startY;
-                if (e.touches && e.touches.length > 0) {
-                    currentX = e.touches[0].clientX; currentY = e.touches[0].clientY;
-                } else if (e.clientX !== undefined) {
-                    currentX = e.clientX; currentY = e.clientY;
-                }
+                let touch = e.touches ? e.touches[0] : e;
+                let currentX = touch.clientX || 0;
+                let currentY = touch.clientY || 0;
                 
                 if (currentX === 0 && currentY === 0) return; 
 
-                if (Math.abs(currentX - startX) > 15 || Math.abs(currentY - startY) > 15) {
+                if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                     hasMoved = true;
                     cancelPress();
                 }
@@ -412,27 +421,29 @@
             
             element.addEventListener('touchmove', checkMovement, { passive: true });
             element.addEventListener('mousemove', checkMovement, { passive: true });
-
+            
+            // Abfangen von Drag & Drop
             element.addEventListener('drag', checkMovement, { passive: true });
-            element.addEventListener('dragend', () => { setTimeout(() => { ignoreNextClick = false; }, 100); });
+            element.addEventListener('dragend', cancelPress);
 
-            // Kontextmenü-Fallback (z.B. langes Drücken auf iOS Safari feuert dies beim Loslassen)
+            // Native Kontextmenüs abfangen
             element.oncontextmenu = (e) => { 
                 e.preventDefault(); 
-                cancelPress(); 
-                
-                // Wir feuern den Lösch-Dialog nur hierüber, wenn der Timer noch NICHT gefeuert hat 
-                // und wir das Element nicht einfach nur verschoben haben.
-                if (!actionTriggered && !hasMoved) {
-                    triggerDelete();
+                cancelPress();
+                // Falls native Events schneller waren, öffnen wir hierüber das Modal
+                if (!hasMoved && !document.querySelector('.modal-overlay.active')) {
+                    isModalTriggered = true;
+                    openDeleteModal(deleteCallback);
                 }
             };
 
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
                     cancelPress();
-                    if (ignoreNextClick || actionTriggered) {
-                        e.preventDefault(); e.stopPropagation(); 
+                    // Wenn gerade das Modal getriggert wurde, normalen Klick blockieren
+                    if (isModalTriggered) {
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
                         return false;
                     }
                     clickCallback(e);
@@ -648,11 +659,12 @@
             if (movie) {
                 delBtn.style.display = 'block';
                 delBtn.onclick = () => {
-                    if(confirm("Diesen Film wirklich löschen?")) {
+                    // Hier greift nun ebenfalls das sichere Custom Modal!
+                    openDeleteModal(() => {
                         deleteDoc(doc(db, "movies", movie.id));
                         DOM.movieModal.classList.remove('active');
                         unlockScroll();
-                    }
+                    });
                 };
             } else { delBtn.style.display = 'none'; }
 
