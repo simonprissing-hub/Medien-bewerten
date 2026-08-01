@@ -36,10 +36,12 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
+        /* Die rigorose Blockierung von nativer Selektion und Drag auf iOS/Android */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
+            -webkit-user-drag: none;
         }
 
         .drag-over {
@@ -282,7 +284,7 @@
         </div>
     </div>
 
-    <!-- Hinzugefügt: Eigenes Custom Delete Modal (blockiert Skripte NICHT) -->
+    <!-- Custom Delete Modal -->
     <div class="modal-overlay" id="customDeleteModal" style="z-index: 2000;">
         <div class="modal-content" style="height: auto; max-width: 320px; margin: auto; border-radius: 16px; background: var(--surface-color);">
             <div class="modal-body" style="text-align: center; padding: 25px 20px;">
@@ -323,6 +325,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Globaler Check, ob wir uns an einem Touch-Gerät befinden
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
         let state = {
             tabs: [], categories: [], movies: [],
             currentTabId: null, editingMovieId: null,
@@ -356,92 +361,86 @@
             deleteModal.classList.add('active');
         }
         
-        document.getElementById('deleteModalCancel').onclick = () => {
+        document.getElementById('deleteModalCancel').onclick = (e) => {
+            e.preventDefault(); // Verhindert doppelte Ausführung
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
         };
         
-        document.getElementById('deleteModalConfirm').onclick = () => {
+        document.getElementById('deleteModalConfirm').onclick = (e) => {
+            e.preventDefault();
             if (activeDeleteAction) activeDeleteAction();
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
         };
 
-        // --- NEUE PERFEKTE LONG PRESS LOGIK ---
+        // --- NEUE PERFEKTE LONG PRESS LOGIK (Bulletproof) ---
         function setupLongPress(element, deleteCallback, clickCallback = null) {
-            let pressTimer;
+            let pressTimer = null;
+            let longPressTriggered = false;
             let startX = 0, startY = 0;
-            let hasMoved = false;
-            let isModalTriggered = false;
 
-            const startPress = (e) => {
-                // Keine Aktion starten, wenn irgendein Modal offen ist
+            const clearTimer = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            const onStart = (e) => {
+                // VERHINDERT DOPPELTEN TIMER: Ignoriere simulierte Maus-Events auf Touchscreens!
+                if (e.type === 'mousedown' && isTouchDevice) return;
+                
+                // Kein Start, wenn ein Fenster offen ist
                 if (document.querySelector('.modal-overlay.active')) return;
                 
-                hasMoved = false;
-                isModalTriggered = false;
+                clearTimer(); // Absoluter Sicherheits-Clear
+                longPressTriggered = false;
                 
-                let touch = e.touches ? e.touches[0] : e;
+                const touch = e.touches ? e.touches[0] : e;
                 startX = touch.clientX || 0; 
                 startY = touch.clientY || 0;
 
-                pressTimer = window.setTimeout(() => {
-                    if (hasMoved) return;
-                    
-                    isModalTriggered = true;
+                pressTimer = setTimeout(() => {
+                    longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
-                    
-                    // Wir rufen unser sicheres HTML Modal auf! Kein Einfrieren des Browsers mehr.
                     openDeleteModal(deleteCallback);
-                    
-                }, 800); // 800ms für Long Press
+                }, 600); // 600ms ist der perfekte Sweet-Spot für Handys
             };
 
-            const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
-
-            const checkMovement = (e) => {
-                let touch = e.touches ? e.touches[0] : e;
-                let currentX = touch.clientX || 0;
-                let currentY = touch.clientY || 0;
+            const onMove = (e) => {
+                if (!pressTimer) return;
+                const touch = e.touches ? e.touches[0] : e;
+                const currentX = touch.clientX || 0;
+                const currentY = touch.clientY || 0;
                 
-                if (currentX === 0 && currentY === 0) return; 
-
+                // Bricht den Long-Press ab, wenn der Finger verrutscht
                 if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
-                    hasMoved = true;
-                    cancelPress();
+                    clearTimer();
                 }
             };
 
-            element.addEventListener('touchstart', startPress, { passive: true });
-            element.addEventListener('mousedown', startPress);
-            
-            element.addEventListener('touchend', cancelPress);
-            element.addEventListener('mouseup', cancelPress);
-            element.addEventListener('mouseleave', cancelPress);
-            
-            element.addEventListener('touchmove', checkMovement, { passive: true });
-            element.addEventListener('mousemove', checkMovement, { passive: true });
-            
-            // Abfangen von Drag & Drop
-            element.addEventListener('drag', checkMovement, { passive: true });
-            element.addEventListener('dragend', cancelPress);
+            const onEnd = () => { clearTimer(); };
 
-            // Native Kontextmenüs abfangen
-            element.oncontextmenu = (e) => { 
-                e.preventDefault(); 
-                cancelPress();
-                // Falls native Events schneller waren, öffnen wir hierüber das Modal
-                if (!hasMoved && !document.querySelector('.modal-overlay.active')) {
-                    isModalTriggered = true;
-                    openDeleteModal(deleteCallback);
-                }
-            };
+            // Native Event Listener
+            element.addEventListener('touchstart', onStart, { passive: true });
+            element.addEventListener('touchmove', onMove, { passive: true });
+            element.addEventListener('touchend', onEnd);
+            element.addEventListener('touchcancel', onEnd);
+
+            // Fallback für PC-Maus
+            element.addEventListener('mousedown', onStart);
+            element.addEventListener('mousemove', onMove);
+            element.addEventListener('mouseup', onEnd);
+            element.addEventListener('mouseleave', onEnd);
+
+            // Blockiert das nervige iOS/Android Kontextmenü, welches Touch blockiert
+            element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
-                    cancelPress();
-                    // Wenn gerade das Modal getriggert wurde, normalen Klick blockieren
-                    if (isModalTriggered) {
+                    // Blockiere den normalen Klick, wenn gerade ein Long-Press stattgefunden hat!
+                    if (longPressTriggered) {
                         e.preventDefault(); 
                         e.stopPropagation(); 
                         return false;
@@ -506,21 +505,25 @@
                     }
                 );
 
-                el.draggable = true;
-                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
-                el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = async (e) => {
-                    e.preventDefault();
-                    el.classList.remove('drag-over');
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index && !isNaN(fromIndex)) {
-                        let newTabs = [...state.tabs];
-                        const [moved] = newTabs.splice(fromIndex, 1);
-                        newTabs.splice(index, 0, moved);
-                        newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
-                    }
-                };
+                // FIX: Aktiviere Drag & Drop NUR am PC. Auf Handys blockiert dies sonst den Long-Press!
+                if (!isTouchDevice) {
+                    el.draggable = true;
+                    el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                    el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                    el.ondragleave = () => { el.classList.remove('drag-over'); };
+                    el.ondrop = async (e) => {
+                        e.preventDefault();
+                        el.classList.remove('drag-over');
+                        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                        if (fromIndex !== index && !isNaN(fromIndex)) {
+                            let newTabs = [...state.tabs];
+                            const [moved] = newTabs.splice(fromIndex, 1);
+                            newTabs.splice(index, 0, moved);
+                            newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
+                        }
+                    };
+                }
+
                 DOM.tabBar.appendChild(el);
             });
 
@@ -659,7 +662,6 @@
             if (movie) {
                 delBtn.style.display = 'block';
                 delBtn.onclick = () => {
-                    // Hier greift nun ebenfalls das sichere Custom Modal!
                     openDeleteModal(() => {
                         deleteDoc(doc(db, "movies", movie.id));
                         DOM.movieModal.classList.remove('active');
@@ -698,21 +700,24 @@
                     }
                 );
 
-                el.draggable = true;
-                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
-                el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = async (e) => {
-                    e.preventDefault();
-                    el.classList.remove('drag-over');
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index && !isNaN(fromIndex)) {
-                        let newCats = [...state.categories];
-                        const [moved] = newCats.splice(fromIndex, 1);
-                        newCats.splice(index, 0, moved);
-                        newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
-                    }
-                };
+                // FIX: Aktiviere Drag & Drop NUR am PC.
+                if (!isTouchDevice) {
+                    el.draggable = true;
+                    el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                    el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                    el.ondragleave = () => { el.classList.remove('drag-over'); };
+                    el.ondrop = async (e) => {
+                        e.preventDefault();
+                        el.classList.remove('drag-over');
+                        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                        if (fromIndex !== index && !isNaN(fromIndex)) {
+                            let newCats = [...state.categories];
+                            const [moved] = newCats.splice(fromIndex, 1);
+                            newCats.splice(index, 0, moved);
+                            newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
+                        }
+                    };
+                }
 
                 list.appendChild(el);
             });
