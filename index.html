@@ -36,17 +36,17 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Buttons & Interaktionen beschleunigen, Doppelklick-Verzögerung blockieren */
+        /* Buttons & Interaktionen beschleunigen */
         button, .btn-text, .btn-primary, .btn-icon {
             touch-action: manipulation;
         }
 
-        /* Blockierung von nativer Selektion und Drag auf iOS/Android */
+        /* Blockierung von nativer Text-Selektion, ABER Drag erlauben! */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
-            -webkit-user-drag: none;
+            /* -webkit-user-drag: none; WURDE ENTFERNT, DAMIT DRAG&DROP WIEDER GEHT */
         }
 
         .drag-over {
@@ -103,14 +103,14 @@
             align-items: center; justify-content: center; color: var(--accent-color);
             font-size: 30px; overflow: hidden;
         }
-        .movie-poster img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+        .movie-poster img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
         .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
         .movie-rating { color: var(--star-color); font-weight: 600; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
         .movie-date { font-size: 12px; color: var(--text-secondary); }
         .empty-state { text-align: center; padding: 50px 20px; color: var(--text-secondary); }
 
-        /* Modals (Editor) */
+        /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); display: none; z-index: 1000;
@@ -199,7 +199,19 @@
             background: var(--accent-color); color: white; border: none; 
             font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; margin-top: 10px;
         }
+
+        /* Aktions-Menü Buttons */
+        .action-menu-btn {
+            display: block; width: 100%; padding: 15px; border-radius: 10px; 
+            background: var(--surface-color); color: var(--text-primary); border: none; 
+            font-size: 18px; cursor: pointer; text-align: center; margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-weight: 500;
+        }
+        .action-menu-btn.danger { color: var(--danger-color); }
     </style>
+
+    <!-- Polyfill: Macht natives Drag&Drop auf Touch-Geräten möglich! -->
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
 </head>
 <body>
 
@@ -289,6 +301,15 @@
         </div>
     </div>
 
+    <!-- NEU: Kontextmenü (Bearbeiten / Löschen) -->
+    <div class="modal-overlay" id="actionMenuModal" style="z-index: 1900;">
+        <div class="modal-content" style="height: auto; max-width: 320px; margin: auto; border-radius: 16px; background: transparent; padding: 20px; box-shadow: none;">
+            <button type="button" class="action-menu-btn" id="actionMenuEditBtn">✏️ Bearbeiten</button>
+            <button type="button" class="action-menu-btn danger" id="actionMenuDeleteBtn">🗑️ Löschen</button>
+            <button type="button" class="action-menu-btn" id="actionMenuCancelBtn" style="margin-top: 20px; font-weight: bold;">Abbrechen</button>
+        </div>
+    </div>
+
     <!-- Custom Delete Modal -->
     <div class="modal-overlay" id="customDeleteModal" style="z-index: 2000;">
         <div class="modal-content" style="height: auto; max-width: 320px; margin: auto; border-radius: 16px; background: var(--surface-color);">
@@ -330,9 +351,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Globaler Check, ob wir uns an einem Touch-Gerät befinden
-        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
         let state = {
             tabs: [], categories: [], movies: [],
             currentTabId: null, editingMovieId: null,
@@ -354,12 +372,9 @@
             localStorage.setItem('theme', newTheme);
         };
 
-        // Scroll Lock Management - Blockiert nur, wenn auch wirklich Fenster offen sind
-        function lockScroll() { 
-            document.body.style.overflow = 'hidden'; 
-        }
+        // Scroll Lock Management
+        function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { 
-            // Gebe Scrollen nur frei, wenn KEIN EINZIGES Fenster mehr aktiv ist
             if (document.querySelectorAll('.modal-overlay.active').length === 0) {
                 document.body.style.overflow = ''; 
             }
@@ -368,8 +383,6 @@
         // --- Custom Delete Modal Logik ---
         let activeDeleteAction = null;
         const deleteModal = document.getElementById('customDeleteModal');
-        
-        // Verhindert das Scrollen des Hintergrunds direkt AUF dem Lösch-Overlay (iOS Fix)
         deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
         
         function openDeleteModal(onConfirmCallback) {
@@ -378,7 +391,6 @@
             lockScroll();
         }
         
-        // Fix 3: Sauberes onClick ohne preventDefault(), was den "Doppelklick"-Bug auf iOS löst
         document.getElementById('deleteModalCancel').onclick = () => {
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
@@ -392,26 +404,44 @@
             unlockScroll();
         };
 
-        // --- NEUE PERFEKTE LONG PRESS LOGIK ---
-        function setupLongPress(element, deleteCallback, clickCallback = null) {
+        // --- Aktions-Menü Logik (Bearbeiten/Löschen) ---
+        let activeEditCallback = null;
+        let activeDeleteCallback = null;
+        const actionMenuModal = document.getElementById('actionMenuModal');
+        actionMenuModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+        function openActionMenu(onEdit, onDelete) {
+            activeEditCallback = onEdit;
+            activeDeleteCallback = onDelete;
+            actionMenuModal.classList.add('active');
+            lockScroll();
+        }
+
+        document.getElementById('actionMenuEditBtn').onclick = () => {
+            actionMenuModal.classList.remove('active');
+            if (activeEditCallback) activeEditCallback();
+        };
+
+        document.getElementById('actionMenuDeleteBtn').onclick = () => {
+            actionMenuModal.classList.remove('active');
+            if (activeDeleteCallback) openDeleteModal(activeDeleteCallback);
+        };
+
+        document.getElementById('actionMenuCancelBtn').onclick = () => {
+            actionMenuModal.classList.remove('active');
+            unlockScroll();
+        };
+
+        // --- PERFEKTE LONG PRESS LOGIK ---
+        function setupLongPress(element, onEdit, onDelete, onClick) {
             let pressTimer = null;
             let longPressTriggered = false;
             let startX = 0, startY = 0;
 
-            const clearTimer = () => {
-                if (pressTimer) {
-                    clearTimeout(pressTimer);
-                    pressTimer = null;
-                }
-            };
+            const clearTimer = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
 
             const onStart = (e) => {
-                if (e.type === 'mousedown' && isTouchDevice) return;
-                
-                // Fix 2: Blockiere nur, wenn das "Wirklich Löschen?" Fenster offen ist! 
-                // Nicht blockieren, wenn wir uns im Film-Editor befinden (damit Vorlagen gelöscht werden können).
-                if (document.getElementById('customDeleteModal').classList.contains('active')) return;
-                
+                if (document.querySelector('.modal-overlay.active')) return; 
                 clearTimer(); 
                 longPressTriggered = false;
                 
@@ -422,23 +452,17 @@
                 pressTimer = setTimeout(() => {
                     longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
-                    openDeleteModal(deleteCallback);
+                    openActionMenu(onEdit, onDelete);
                 }, 600);
             };
 
             const onMove = (e) => {
-                // Fix 1: Wenn der Löschdialog aufgeploppt ist und man den Finger weiterhin
-                // bewegt, wird die Scroll-Aktion hier rücksichtslos abgeblockt!
-                if (longPressTriggered) {
-                    if (e.cancelable) e.preventDefault();
-                    return;
-                }
-
                 if (!pressTimer) return;
                 const touch = e.touches ? e.touches[0] : e;
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
+                // Sobald sich der Finger bewegt -> abbrechen (damit Drag&Drop greifen kann)
                 if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                     clearTimer();
                 }
@@ -446,13 +470,11 @@
 
             const onEnd = () => { clearTimer(); };
 
-            // Touch Events (passive: false beim onMove ist extrem wichtig für Fix 1)
             element.addEventListener('touchstart', onStart, { passive: true });
-            element.addEventListener('touchmove', onMove, { passive: false });
+            element.addEventListener('touchmove', onMove, { passive: true }); // passive: true lässt Drag&Drop zu!
             element.addEventListener('touchend', onEnd);
             element.addEventListener('touchcancel', onEnd);
 
-            // PC-Maus Fallback
             element.addEventListener('mousedown', onStart);
             element.addEventListener('mousemove', onMove);
             element.addEventListener('mouseup', onEnd);
@@ -460,20 +482,17 @@
 
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
-            if (clickCallback) {
+            if (onClick) {
                 element.addEventListener('click', (e) => {
                     if (longPressTriggered) {
-                        e.preventDefault(); 
-                        e.stopPropagation(); 
-                        return false;
+                        e.preventDefault(); e.stopPropagation(); return false;
                     }
-                    clickCallback(e);
+                    onClick(e);
                 });
             }
         }
-        // --- ENDE LONG PRESS LOGIK ---
 
-        // Firebase Sync
+        // Firebase Sync (Unverändert)
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
             (snapshot) => {
                 state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -518,32 +537,30 @@
                 
                 setupLongPress(
                     el, 
-                    () => { 
+                    () => { openSimpleModal('EditTab', tab); }, // Bearbeiten
+                    () => { // Löschen
                         deleteDoc(doc(db, "tabs", tab.id));
                         if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
                     },
-                    () => { 
-                        state.currentTabId = tab.id; renderTabs(); renderMovies(); 
-                    }
+                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } // Klick
                 );
 
-                if (!isTouchDevice) {
-                    el.draggable = true;
-                    el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                    el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
-                    el.ondragleave = () => { el.classList.remove('drag-over'); };
-                    el.ondrop = async (e) => {
-                        e.preventDefault();
-                        el.classList.remove('drag-over');
-                        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                        if (fromIndex !== index && !isNaN(fromIndex)) {
-                            let newTabs = [...state.tabs];
-                            const [moved] = newTabs.splice(fromIndex, 1);
-                            newTabs.splice(index, 0, moved);
-                            newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
-                        }
-                    };
-                }
+                // Drag & Drop für Desktop & Touch (Dank Polyfill!)
+                el.draggable = true;
+                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragleave = () => { el.classList.remove('drag-over'); };
+                el.ondrop = async (e) => {
+                    e.preventDefault();
+                    el.classList.remove('drag-over');
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (fromIndex !== index && !isNaN(fromIndex)) {
+                        let newTabs = [...state.tabs];
+                        const [moved] = newTabs.splice(fromIndex, 1);
+                        newTabs.splice(index, 0, moved);
+                        newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
+                    }
+                };
 
                 DOM.tabBar.appendChild(el);
             });
@@ -594,8 +611,9 @@
                 
                 setupLongPress(
                     el,
-                    () => { deleteDoc(doc(db, "movies", movie.id)); },
-                    () => { openMovieEditor(movie); }
+                    () => { openMovieEditor(movie); }, // Bearbeiten
+                    () => { deleteDoc(doc(db, "movies", movie.id)); }, // Löschen
+                    () => { openMovieEditor(movie); } // Klick (öffnet eh Editor)
                 );
 
                 DOM.movieList.appendChild(el);
@@ -635,10 +653,9 @@
                     canvas.width = w; canvas.height = h;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, w, h);
-                    const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8);
                     
-                    state.movieForm.imageData = resizedBase64;
-                    posterPreview.src = resizedBase64;
+                    state.movieForm.imageData = canvas.toDataURL('image/jpeg', 0.8);
+                    posterPreview.src = state.movieForm.imageData;
                     posterPreview.style.display = 'block';
                     document.getElementById('posterPlaceholder').style.display = 'none';
                     document.getElementById('removePosterBtn').style.display = 'block';
@@ -707,8 +724,9 @@
                 
                 setupLongPress(
                     el,
-                    () => { deleteDoc(doc(db, "categories", cat.id)); },
-                    () => {
+                    () => { openSimpleModal('EditCategory', cat); }, // Bearbeiten
+                    () => { deleteDoc(doc(db, "categories", cat.id)); }, // Löschen
+                    () => { // Klick
                         state.movieForm.selectedCategoryId = cat.id;
                         let newCriteria = [];
                         cat.criteriaNames.forEach(name => {
@@ -721,23 +739,22 @@
                     }
                 );
 
-                if (!isTouchDevice) {
-                    el.draggable = true;
-                    el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                    el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
-                    el.ondragleave = () => { el.classList.remove('drag-over'); };
-                    el.ondrop = async (e) => {
-                        e.preventDefault();
-                        el.classList.remove('drag-over');
-                        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                        if (fromIndex !== index && !isNaN(fromIndex)) {
-                            let newCats = [...state.categories];
-                            const [moved] = newCats.splice(fromIndex, 1);
-                            newCats.splice(index, 0, moved);
-                            newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
-                        }
-                    };
-                }
+                // Drag & Drop für Desktop & Touch
+                el.draggable = true;
+                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
+                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragleave = () => { el.classList.remove('drag-over'); };
+                el.ondrop = async (e) => {
+                    e.preventDefault();
+                    el.classList.remove('drag-over');
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (fromIndex !== index && !isNaN(fromIndex)) {
+                        let newCats = [...state.categories];
+                        const [moved] = newCats.splice(fromIndex, 1);
+                        newCats.splice(index, 0, moved);
+                        newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
+                    }
+                };
 
                 list.appendChild(el);
             });
@@ -791,7 +808,7 @@
                 DOM.movieModal.classList.remove('active');
                 unlockScroll();
             } catch (error) {
-                console.error(error); alert("Der Film konnte nicht gespeichert werden: " + error.message);
+                console.error(error); alert("Fehler: " + error.message);
             } finally { saveBtn.innerText = originalText; validateMovieForm(); }
         };
 
@@ -805,9 +822,8 @@
             const bodyEl = document.getElementById('simpleModalBody');
             const saveBtn = document.getElementById('saveSimpleModalBtn');
             
-            titleEl.innerText = type === 'Tab' ? 'Neuer Tab' : 'Neue Vorlage';
-            
             if (type === 'Tab') {
+                titleEl.innerText = 'Neuer Tab';
                 bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
                 saveBtn.onclick = async () => {
                     const val = document.getElementById('tabNameInput').value.trim();
@@ -815,53 +831,84 @@
                         try {
                             saveBtn.disabled = true;
                             await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
-                            DOM.simpleModal.classList.remove('active');
-                            unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } 
-                        finally { saveBtn.disabled = false; }
+                            DOM.simpleModal.classList.remove('active'); unlockScroll();
+                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
                     }
                 };
-            } else if (type === 'Category') {
-                bodyEl.innerHTML = `
-                    <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" style="margin-bottom: 20px;">
-                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
-                    <div id="newCatCriteriaContainer">
-                        <div class="flex-row" style="margin-bottom: 10px; gap: 10px;">
-                            <input type="text" class="input-text cat-crit-input" placeholder="Erstes Kriterium (z.B. Spannung)">
-                        </div>
-                    </div>
-                    <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
-                `;
-                
-                document.getElementById('addCatCritBtn').onclick = () => {
-                    const cont = document.getElementById('newCatCriteriaContainer');
-                    const div = document.createElement('div');
-                    div.className = 'flex-row'; div.style.marginBottom = '10px'; div.style.gap = '10px';
-                    div.innerHTML = `
-                        <input type="text" class="input-text cat-crit-input" placeholder="Neues Kriterium">
-                        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="padding: 10px;">🗑</button>
-                    `;
-                    cont.appendChild(div);
-                };
-
+            } 
+            else if (type === 'EditTab') {
+                titleEl.innerText = 'Tab umbenennen';
+                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${item.name}">`;
                 saveBtn.onclick = async () => {
-                    const name = document.getElementById('catNameInput').value.trim();
-                    const inputs = document.querySelectorAll('.cat-crit-input');
-                    const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
-                    
-                    if(name && criteria.length > 0) {
+                    const val = document.getElementById('tabNameInput').value.trim();
+                    if(val) {
                         try {
                             saveBtn.disabled = true;
-                            const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
-                            state.movieForm.selectedCategoryId = newCatRef.id;
-                            DOM.simpleModal.classList.remove('active');
-                            unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } 
-                        finally { saveBtn.disabled = false; }
+                            await updateDoc(doc(db, "tabs", item.id), { name: val });
+                            DOM.simpleModal.classList.remove('active'); unlockScroll();
+                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
                     }
                 };
             }
+            else if (type === 'Category') {
+                titleEl.innerText = 'Neue Vorlage';
+                buildCategoryEditorBody(bodyEl, "", ["Spannung"]);
+                saveBtn.onclick = async () => saveCategoryData(null, saveBtn);
+            }
+            else if (type === 'EditCategory') {
+                titleEl.innerText = 'Vorlage bearbeiten';
+                buildCategoryEditorBody(bodyEl, item.name, item.criteriaNames);
+                saveBtn.onclick = async () => saveCategoryData(item, saveBtn);
+            }
             DOM.simpleModal.classList.add('active');
+        }
+
+        // Hilfsfunktionen für den Vorlagen-Editor
+        function buildCategoryEditorBody(container, nameVal, criteriaArr) {
+            container.innerHTML = `
+                <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${nameVal}" style="margin-bottom: 20px;">
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
+                <div id="newCatCriteriaContainer">
+                    ${criteriaArr.map(c => `
+                        <div class="flex-row" style="margin-bottom: 10px; gap: 10px;">
+                            <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${c}">
+                            <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="padding: 10px;">🗑</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
+            `;
+            document.getElementById('addCatCritBtn').onclick = () => {
+                const cont = document.getElementById('newCatCriteriaContainer');
+                const div = document.createElement('div');
+                div.className = 'flex-row'; div.style.marginBottom = '10px'; div.style.gap = '10px';
+                div.innerHTML = `
+                    <input type="text" class="input-text cat-crit-input" placeholder="Neues Kriterium">
+                    <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="padding: 10px;">🗑</button>
+                `;
+                cont.appendChild(div);
+            };
+        }
+
+        async function saveCategoryData(existingItem, saveBtn) {
+            const name = document.getElementById('catNameInput').value.trim();
+            const inputs = document.querySelectorAll('.cat-crit-input');
+            const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
+            
+            if(name && criteria.length > 0) {
+                try {
+                    saveBtn.disabled = true;
+                    if (existingItem) {
+                        await updateDoc(doc(db, "categories", existingItem.id), { name: name, criteriaNames: criteria });
+                    } else {
+                        const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
+                        state.movieForm.selectedCategoryId = newCatRef.id;
+                    }
+                    DOM.simpleModal.classList.remove('active');
+                    unlockScroll();
+                } catch (error) { alert("Fehler: " + error.message); } 
+                finally { saveBtn.disabled = false; }
+            }
         }
     </script>
 </body>
