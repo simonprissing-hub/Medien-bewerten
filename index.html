@@ -36,7 +36,12 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Die rigorose Blockierung von nativer Selektion und Drag auf iOS/Android */
+        /* Buttons & Interaktionen beschleunigen, Doppelklick-Verzögerung blockieren */
+        button, .btn-text, .btn-primary, .btn-icon {
+            touch-action: manipulation;
+        }
+
+        /* Blockierung von nativer Selektion und Drag auf iOS/Android */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
@@ -202,8 +207,8 @@
     <div class="header">
         <h1>Mein Filmtagebuch</h1>
         <div class="header-actions">
-            <button id="themeToggleBtn">◑</button>
-            <button id="addMovieBtn">＋</button>
+            <button type="button" id="themeToggleBtn">◑</button>
+            <button type="button" id="addMovieBtn">＋</button>
         </div>
     </div>
 
@@ -219,9 +224,9 @@
     <div class="modal-overlay" id="movieModal">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="btn-text btn-cancel" id="cancelMovieBtn">Abbrechen</button>
+                <button type="button" class="btn-text btn-cancel" id="cancelMovieBtn">Abbrechen</button>
                 <h3 id="movieModalTitle">Neuer Eintrag</h3>
-                <button class="btn-text btn-save" id="saveMovieBtn" disabled>Speichern</button>
+                <button type="button" class="btn-text btn-save" id="saveMovieBtn" disabled>Speichern</button>
             </div>
             <div class="modal-body">
                 <div class="editor-layout">
@@ -233,13 +238,13 @@
                             <input type="file" id="posterInput" accept="image/*">
                         </label>
                         <div class="flex-row" style="margin-bottom: 15px;">
-                            <button class="btn-text btn-cancel" id="removePosterBtn" style="display:none; font-size:12px;">🗑 Bild entfernen</button>
+                            <button type="button" class="btn-text btn-cancel" id="removePosterBtn" style="display:none; font-size:12px;">🗑 Bild entfernen</button>
                         </div>
                         
                         <div class="form-group" style="background: var(--surface-color); padding: 15px; border-radius: 12px;">
                             <div class="flex-row">
                                 <strong>Gesehen am:</strong>
-                                <button class="btn-icon" id="clearDateBtn">🗑</button>
+                                <button type="button" class="btn-icon" id="clearDateBtn">🗑</button>
                             </div>
                             <input type="date" class="input-text" id="watchedDateInput" style="margin-top: 10px;">
                         </div>
@@ -251,7 +256,7 @@
                         
                         <div class="flex-row">
                             <div class="section-title">Kategorie (Preset)</div>
-                            <button class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Vorlage</button>
+                            <button type="button" class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Vorlage</button>
                         </div>
                         <div class="category-scroll" id="categoryList">
                             <!-- Categories injected by JS -->
@@ -261,9 +266,9 @@
                         <div id="criteriaContainer">
                             <!-- Criteria injected by JS -->
                         </div>
-                        <button class="btn-text btn-save" id="addCriterionBtn" style="margin-top: 15px;">+ Weiteres Kriterium hinzufügen</button>
+                        <button type="button" class="btn-text btn-save" id="addCriterionBtn" style="margin-top: 15px;">+ Weiteres Kriterium hinzufügen</button>
                         
-                        <button class="btn-primary" id="deleteMovieBtn" style="background: var(--danger-color); margin-top: 40px; display: none;">Film löschen</button>
+                        <button type="button" class="btn-primary" id="deleteMovieBtn" style="background: var(--danger-color); margin-top: 40px; display: none;">Film löschen</button>
                     </div>
                 </div>
             </div>
@@ -274,9 +279,9 @@
     <div class="modal-overlay" id="simpleModal">
         <div class="modal-content" style="height: auto; max-width: 400px; margin: auto; border-radius: 12px;">
             <div class="modal-header">
-                <button class="btn-text btn-cancel" id="cancelSimpleModalBtn">Abbrechen</button>
+                <button type="button" class="btn-text btn-cancel" id="cancelSimpleModalBtn">Abbrechen</button>
                 <h3 id="simpleModalTitle">Titel</h3>
-                <button class="btn-text btn-save" id="saveSimpleModalBtn">Speichern</button>
+                <button type="button" class="btn-text btn-save" id="saveSimpleModalBtn">Speichern</button>
             </div>
             <div class="modal-body" id="simpleModalBody">
                 <!-- Injected via JS -->
@@ -292,8 +297,8 @@
                 <h3 style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
-                    <button class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top: 0; flex: 1;">Löschen</button>
+                    <button type="button" class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
+                    <button type="button" class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top: 0; flex: 1;">Löschen</button>
                 </div>
             </div>
         </div>
@@ -349,32 +354,45 @@
             localStorage.setItem('theme', newTheme);
         };
 
-        function lockScroll() { document.body.style.overflow = 'hidden'; }
-        function unlockScroll() { document.body.style.overflow = ''; }
+        // Scroll Lock Management - Blockiert nur, wenn auch wirklich Fenster offen sind
+        function lockScroll() { 
+            document.body.style.overflow = 'hidden'; 
+        }
+        function unlockScroll() { 
+            // Gebe Scrollen nur frei, wenn KEIN EINZIGES Fenster mehr aktiv ist
+            if (document.querySelectorAll('.modal-overlay.active').length === 0) {
+                document.body.style.overflow = ''; 
+            }
+        }
 
         // --- Custom Delete Modal Logik ---
         let activeDeleteAction = null;
         const deleteModal = document.getElementById('customDeleteModal');
         
+        // Verhindert das Scrollen des Hintergrunds direkt AUF dem Lösch-Overlay (iOS Fix)
+        deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        
         function openDeleteModal(onConfirmCallback) {
             activeDeleteAction = onConfirmCallback;
             deleteModal.classList.add('active');
+            lockScroll();
         }
         
-        document.getElementById('deleteModalCancel').onclick = (e) => {
-            e.preventDefault(); // Verhindert doppelte Ausführung
+        // Fix 3: Sauberes onClick ohne preventDefault(), was den "Doppelklick"-Bug auf iOS löst
+        document.getElementById('deleteModalCancel').onclick = () => {
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
+            unlockScroll();
         };
         
-        document.getElementById('deleteModalConfirm').onclick = (e) => {
-            e.preventDefault();
+        document.getElementById('deleteModalConfirm').onclick = () => {
             if (activeDeleteAction) activeDeleteAction();
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
+            unlockScroll();
         };
 
-        // --- NEUE PERFEKTE LONG PRESS LOGIK (Bulletproof) ---
+        // --- NEUE PERFEKTE LONG PRESS LOGIK ---
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer = null;
             let longPressTriggered = false;
@@ -388,13 +406,13 @@
             };
 
             const onStart = (e) => {
-                // VERHINDERT DOPPELTEN TIMER: Ignoriere simulierte Maus-Events auf Touchscreens!
                 if (e.type === 'mousedown' && isTouchDevice) return;
                 
-                // Kein Start, wenn ein Fenster offen ist
-                if (document.querySelector('.modal-overlay.active')) return;
+                // Fix 2: Blockiere nur, wenn das "Wirklich Löschen?" Fenster offen ist! 
+                // Nicht blockieren, wenn wir uns im Film-Editor befinden (damit Vorlagen gelöscht werden können).
+                if (document.getElementById('customDeleteModal').classList.contains('active')) return;
                 
-                clearTimer(); // Absoluter Sicherheits-Clear
+                clearTimer(); 
                 longPressTriggered = false;
                 
                 const touch = e.touches ? e.touches[0] : e;
@@ -405,16 +423,22 @@
                     longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                     openDeleteModal(deleteCallback);
-                }, 600); // 600ms ist der perfekte Sweet-Spot für Handys
+                }, 600);
             };
 
             const onMove = (e) => {
+                // Fix 1: Wenn der Löschdialog aufgeploppt ist und man den Finger weiterhin
+                // bewegt, wird die Scroll-Aktion hier rücksichtslos abgeblockt!
+                if (longPressTriggered) {
+                    if (e.cancelable) e.preventDefault();
+                    return;
+                }
+
                 if (!pressTimer) return;
                 const touch = e.touches ? e.touches[0] : e;
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
-                // Bricht den Long-Press ab, wenn der Finger verrutscht
                 if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                     clearTimer();
                 }
@@ -422,24 +446,22 @@
 
             const onEnd = () => { clearTimer(); };
 
-            // Native Event Listener
+            // Touch Events (passive: false beim onMove ist extrem wichtig für Fix 1)
             element.addEventListener('touchstart', onStart, { passive: true });
-            element.addEventListener('touchmove', onMove, { passive: true });
+            element.addEventListener('touchmove', onMove, { passive: false });
             element.addEventListener('touchend', onEnd);
             element.addEventListener('touchcancel', onEnd);
 
-            // Fallback für PC-Maus
+            // PC-Maus Fallback
             element.addEventListener('mousedown', onStart);
             element.addEventListener('mousemove', onMove);
             element.addEventListener('mouseup', onEnd);
             element.addEventListener('mouseleave', onEnd);
 
-            // Blockiert das nervige iOS/Android Kontextmenü, welches Touch blockiert
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
-                    // Blockiere den normalen Klick, wenn gerade ein Long-Press stattgefunden hat!
                     if (longPressTriggered) {
                         e.preventDefault(); 
                         e.stopPropagation(); 
@@ -505,7 +527,6 @@
                     }
                 );
 
-                // FIX: Aktiviere Drag & Drop NUR am PC. Auf Handys blockiert dies sonst den Long-Press!
                 if (!isTouchDevice) {
                     el.draggable = true;
                     el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
@@ -700,7 +721,6 @@
                     }
                 );
 
-                // FIX: Aktiviere Drag & Drop NUR am PC.
                 if (!isTouchDevice) {
                     el.draggable = true;
                     el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
@@ -736,7 +756,7 @@
                     <div class="criterion-header">
                         <input type="text" class="input-text" style="width: 50%; font-weight: bold; background: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 5px;" value="${crit.name}">
                         <div class="stars">${starsHtml}</div>
-                        <button class="btn-icon">🗑</button>
+                        <button type="button" class="btn-icon">🗑</button>
                     </div>
                     <textarea class="input-text" placeholder="Notizen...">${crit.notes}</textarea>
                 `;
