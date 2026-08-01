@@ -332,61 +332,77 @@
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { document.body.style.overflow = ''; }
 
-        // PERFEKTIONIERTE LONG-PRESS & DRAG LOGIK
+        // --- VERBESSERTE LONG PRESS LOGIK (Sicher gegen doppeltes Triggern und Drag-Hänger) ---
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer;
             let startX = 0, startY = 0;
             let ignoreNextClick = false;
             let hasMoved = false;
+            let actionTriggered = false; // Verhindert mehrfaches Auslösen (Lock)
 
             const startPress = (e) => {
+                if (actionTriggered) return;
                 ignoreNextClick = false;
                 hasMoved = false;
                 
-                // Koordinaten speichern
                 if (e.touches && e.touches.length > 0) {
                     startX = e.touches[0].clientX; startY = e.touches[0].clientY;
                 } else if (e.clientX !== undefined) {
                     startX = e.clientX; startY = e.clientY;
                 }
 
-                // Timer auf 1 Sekunde setzen. 
-                // Das gibt dem User genug Zeit loszuziehen. Bleibt er still, wird gelöscht.
                 pressTimer = window.setTimeout(() => {
-                    if (hasMoved) return; // Abbrechen, wenn gezogen wurde!
-                    
-                    ignoreNextClick = true; 
-                    setTimeout(() => {
-                        if(confirm("Möchtest du dieses Element wirklich löschen?")) {
-                            deleteCallback();
-                        }
-                    }, 10);
+                    if (hasMoved || actionTriggered) return;
+                    triggerDelete();
                 }, 1000); 
+            };
+
+            const triggerDelete = () => {
+                actionTriggered = true;
+                ignoreNextClick = true;
+
+                // 1. Zwinge den Browser, das Element "loszulassen", falls ein Drag im Hintergrund lief
+                const wasDraggable = element.draggable;
+                if (wasDraggable) element.draggable = false;
+                element.style.pointerEvents = 'none'; // Verhindert Interaktionen während der Dialog öffnet
+
+                // 2. Ein minimaler Delay gibt dem Browser Zeit, das "Loslassen" ins DOM zu übertragen
+                setTimeout(() => {
+                    if (confirm("Möchtest du dieses Element wirklich löschen?")) {
+                        deleteCallback();
+                    }
+                    
+                    // 3. Nach Schließen des Dialogs wiederherstellen und Schloss aufheben
+                    setTimeout(() => {
+                        if (wasDraggable) element.draggable = true;
+                        element.style.pointerEvents = '';
+                        actionTriggered = false; // Wieder freigeben
+                        // ignoreNextClick lassen wir noch kurz aktiv, damit der "Abbrechen" Klick nicht sofort das Element öffnet
+                        setTimeout(() => { ignoreNextClick = false; }, 100);
+                    }, 300); // 300ms Cooldown schluckt verspätete Events (z.B. contextmenu beim Finger loslassen)
+                }, 50);
             };
 
             const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
 
-            // Berechnet, ob sich der Finger/die Maus signifikant bewegt hat (mehr als 15 Pixel)
             const checkMovement = (e) => {
-                let currentX = startX, currentY = startY;
+                if (actionTriggered) return; 
                 
+                let currentX = startX, currentY = startY;
                 if (e.touches && e.touches.length > 0) {
                     currentX = e.touches[0].clientX; currentY = e.touches[0].clientY;
                 } else if (e.clientX !== undefined) {
                     currentX = e.clientX; currentY = e.clientY;
                 }
                 
-                // Fehlerhafte 0-Werte bei manchen Drag-Events ignorieren
                 if (currentX === 0 && currentY === 0) return; 
 
-                // 15 Pixel Toleranz: Ist es ein Drag (Ziehen) oder ein Wackeln beim Drücken?
                 if (Math.abs(currentX - startX) > 15 || Math.abs(currentY - startY) > 15) {
                     hasMoved = true;
-                    cancelPress(); // Lösch-Timer sofort killen, da User scrollt oder verschiebt!
+                    cancelPress();
                 }
             };
 
-            // Touch & Maus Events
             element.addEventListener('touchstart', startPress, { passive: true });
             element.addEventListener('mousedown', startPress);
             
@@ -397,27 +413,33 @@
             element.addEventListener('touchmove', checkMovement, { passive: true });
             element.addEventListener('mousemove', checkMovement, { passive: true });
 
-            // HTML5 Drag Events (damit der Timer auch gekillt wird, wenn das native Drag startet und sich bewegt)
             element.addEventListener('drag', checkMovement, { passive: true });
             element.addEventListener('dragend', () => { setTimeout(() => { ignoreNextClick = false; }, 100); });
 
-            // Kontextmenü-Fallback
+            // Kontextmenü-Fallback (z.B. langes Drücken auf iOS Safari feuert dies beim Loslassen)
             element.oncontextmenu = (e) => { 
-                e.preventDefault(); cancelPress(); ignoreNextClick = true;
-                if(confirm("Möchtest du dieses Element wirklich löschen?")) deleteCallback(); 
+                e.preventDefault(); 
+                cancelPress(); 
+                
+                // Wir feuern den Lösch-Dialog nur hierüber, wenn der Timer noch NICHT gefeuert hat 
+                // und wir das Element nicht einfach nur verschoben haben.
+                if (!actionTriggered && !hasMoved) {
+                    triggerDelete();
+                }
             };
 
-            // Klick-Logik
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
                     cancelPress();
-                    if (ignoreNextClick) {
-                        e.preventDefault(); e.stopPropagation(); ignoreNextClick = false; return false;
+                    if (ignoreNextClick || actionTriggered) {
+                        e.preventDefault(); e.stopPropagation(); 
+                        return false;
                     }
                     clickCallback(e);
                 });
             }
         }
+        // --- ENDE LONG PRESS LOGIK ---
 
         // Firebase Sync
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
@@ -481,7 +503,7 @@
                     e.preventDefault();
                     el.classList.remove('drag-over');
                     const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index) {
+                    if (fromIndex !== index && !isNaN(fromIndex)) {
                         let newTabs = [...state.tabs];
                         const [moved] = newTabs.splice(fromIndex, 1);
                         newTabs.splice(index, 0, moved);
@@ -672,7 +694,7 @@
                     e.preventDefault();
                     el.classList.remove('drag-over');
                     const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index) {
+                    if (fromIndex !== index && !isNaN(fromIndex)) {
                         let newCats = [...state.categories];
                         const [moved] = newCats.splice(fromIndex, 1);
                         newCats.splice(index, 0, moved);
