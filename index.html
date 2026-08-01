@@ -36,7 +36,6 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Die rigorose Blockierung von nativer Selektion und Drag auf iOS/Android */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
@@ -110,12 +109,15 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); display: none; z-index: 1000;
             justify-content: center; align-items: flex-end;
+            /* Problem 1: Hintergrund komplett sperren, wenn Modus aktiv */
+            pointer-events: none; 
         }
-        .modal-overlay.active { display: flex; }
+        .modal-overlay.active { display: flex; pointer-events: auto; }
+        
         .modal-content {
             background-color: var(--bg-color); width: 100%; max-width: 800px;
             height: 90vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; pointer-events: auto;
         }
         @media(min-width: 768px) {
             .modal-overlay { align-items: center; }
@@ -325,7 +327,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Globaler Check, ob wir uns an einem Touch-Gerät befinden
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
         let state = {
@@ -352,29 +353,37 @@
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { document.body.style.overflow = ''; }
 
-        // --- Custom Delete Modal Logik ---
+        // --- Custom Delete Modal Logik (Problem 3 behoben: sauberes Debouncing) ---
         let activeDeleteAction = null;
         const deleteModal = document.getElementById('customDeleteModal');
+        let isClosingModal = false;
         
         function openDeleteModal(onConfirmCallback) {
+            isClosingModal = false;
             activeDeleteAction = onConfirmCallback;
             deleteModal.classList.add('active');
         }
         
         document.getElementById('deleteModalCancel').onclick = (e) => {
-            e.preventDefault(); // Verhindert doppelte Ausführung
+            e.preventDefault();
+            e.stopPropagation();
+            if (isClosingModal) return;
+            isClosingModal = true;
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
         };
         
         document.getElementById('deleteModalConfirm').onclick = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            if (isClosingModal) return;
+            isClosingModal = true;
             if (activeDeleteAction) activeDeleteAction();
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
         };
 
-        // --- NEUE PERFEKTE LONG PRESS LOGIK (Bulletproof) ---
+        // --- UNIVERSELLE LONG PRESS LOGIK (Problem 2 behoben für Tabs & Vorlagen) ---
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer = null;
             let longPressTriggered = false;
@@ -388,13 +397,10 @@
             };
 
             const onStart = (e) => {
-                // VERHINDERT DOPPELTEN TIMER: Ignoriere simulierte Maus-Events auf Touchscreens!
                 if (e.type === 'mousedown' && isTouchDevice) return;
-                
-                // Kein Start, wenn ein Fenster offen ist
                 if (document.querySelector('.modal-overlay.active')) return;
                 
-                clearTimer(); // Absoluter Sicherheits-Clear
+                clearTimer();
                 longPressTriggered = false;
                 
                 const touch = e.touches ? e.touches[0] : e;
@@ -405,7 +411,7 @@
                     longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                     openDeleteModal(deleteCallback);
-                }, 600); // 600ms ist der perfekte Sweet-Spot für Handys
+                }, 600);
             };
 
             const onMove = (e) => {
@@ -414,7 +420,6 @@
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
-                // Bricht den Long-Press ab, wenn der Finger verrutscht
                 if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                     clearTimer();
                 }
@@ -422,24 +427,20 @@
 
             const onEnd = () => { clearTimer(); };
 
-            // Native Event Listener
             element.addEventListener('touchstart', onStart, { passive: true });
             element.addEventListener('touchmove', onMove, { passive: true });
             element.addEventListener('touchend', onEnd);
             element.addEventListener('touchcancel', onEnd);
 
-            // Fallback für PC-Maus
             element.addEventListener('mousedown', onStart);
             element.addEventListener('mousemove', onMove);
             element.addEventListener('mouseup', onEnd);
             element.addEventListener('mouseleave', onEnd);
 
-            // Blockiert das nervige iOS/Android Kontextmenü, welches Touch blockiert
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
-                    // Blockiere den normalen Klick, wenn gerade ein Long-Press stattgefunden hat!
                     if (longPressTriggered) {
                         e.preventDefault(); 
                         e.stopPropagation(); 
@@ -449,7 +450,6 @@
                 });
             }
         }
-        // --- ENDE LONG PRESS LOGIK ---
 
         // Firebase Sync
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
@@ -505,7 +505,6 @@
                     }
                 );
 
-                // FIX: Aktiviere Drag & Drop NUR am PC. Auf Handys blockiert dies sonst den Long-Press!
                 if (!isTouchDevice) {
                     el.draggable = true;
                     el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
@@ -684,6 +683,7 @@
                 el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
                 el.innerText = cat.name;
                 
+                // Problem 2 behoben: Verwende setupLongPress auch für Vorlagen
                 setupLongPress(
                     el,
                     () => { deleteDoc(doc(db, "categories", cat.id)); },
@@ -700,7 +700,6 @@
                     }
                 );
 
-                // FIX: Aktiviere Drag & Drop NUR am PC.
                 if (!isTouchDevice) {
                     el.draggable = true;
                     el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
