@@ -46,7 +46,6 @@
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
-            /* -webkit-user-drag: none; WURDE ENTFERNT, DAMIT DRAG&DROP WIEDER GEHT */
         }
 
         .drag-over {
@@ -301,7 +300,7 @@
         </div>
     </div>
 
-    <!-- NEU: Kontextmenü (Bearbeiten / Löschen) -->
+    <!-- Kontextmenü (Bearbeiten / Löschen) -->
     <div class="modal-overlay" id="actionMenuModal" style="z-index: 1900;">
         <div class="modal-content" style="height: auto; max-width: 320px; margin: auto; border-radius: 16px; background: transparent; padding: 20px; box-shadow: none;">
             <button type="button" class="action-menu-btn" id="actionMenuEditBtn">✏️ Bearbeiten</button>
@@ -432,7 +431,7 @@
             unlockScroll();
         };
 
-        // --- PERFEKTE LONG PRESS LOGIK ---
+        // --- LONG PRESS LOGIK ---
         function setupLongPress(element, onEdit, onDelete, onClick) {
             let pressTimer = null;
             let longPressTriggered = false;
@@ -462,7 +461,6 @@
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
-                // Sobald sich der Finger bewegt -> abbrechen (damit Drag&Drop greifen kann)
                 if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                     clearTimer();
                 }
@@ -471,7 +469,7 @@
             const onEnd = () => { clearTimer(); };
 
             element.addEventListener('touchstart', onStart, { passive: true });
-            element.addEventListener('touchmove', onMove, { passive: true }); // passive: true lässt Drag&Drop zu!
+            element.addEventListener('touchmove', onMove, { passive: true });
             element.addEventListener('touchend', onEnd);
             element.addEventListener('touchcancel', onEnd);
 
@@ -492,7 +490,7 @@
             }
         }
 
-        // Firebase Sync (Unverändert)
+        // Firebase Sync
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
             (snapshot) => {
                 state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -506,7 +504,9 @@
         onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
             (snapshot) => {
                 state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.movieForm.targetTabId) renderEditorCategories();
+                if (state.movieForm.targetTabId || document.getElementById('movieModal').classList.contains('active')) {
+                    renderEditorCategories();
+                }
             },
             (error) => { console.error(error); }
         );
@@ -537,15 +537,14 @@
                 
                 setupLongPress(
                     el, 
-                    () => { openSimpleModal('EditTab', tab); }, // Bearbeiten
-                    () => { // Löschen
+                    () => { openSimpleModal('EditTab', tab); },
+                    () => {
                         deleteDoc(doc(db, "tabs", tab.id));
                         if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
                     },
-                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } // Klick
+                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); }
                 );
 
-                // Drag & Drop für Desktop & Touch (Dank Polyfill!)
                 el.draggable = true;
                 el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
                 el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
@@ -611,9 +610,9 @@
                 
                 setupLongPress(
                     el,
-                    () => { openMovieEditor(movie); }, // Bearbeiten
-                    () => { deleteDoc(doc(db, "movies", movie.id)); }, // Löschen
-                    () => { openMovieEditor(movie); } // Klick (öffnet eh Editor)
+                    () => { openMovieEditor(movie); },
+                    () => { deleteDoc(doc(db, "movies", movie.id)); },
+                    () => { openMovieEditor(movie); }
                 );
 
                 DOM.movieList.appendChild(el);
@@ -714,6 +713,7 @@
             DOM.movieModal.classList.add('active');
         }
 
+        // Render Category Pills (mit Long Press für Bearbeiten/Löschen & Drag & Drop)
         function renderEditorCategories() {
             const list = document.getElementById('categoryList');
             list.innerHTML = '';
@@ -726,7 +726,7 @@
                     el,
                     () => { openSimpleModal('EditCategory', cat); }, // Bearbeiten
                     () => { deleteDoc(doc(db, "categories", cat.id)); }, // Löschen
-                    () => { // Klick
+                    () => { // Klick (Auswählen)
                         state.movieForm.selectedCategoryId = cat.id;
                         let newCriteria = [];
                         cat.criteriaNames.forEach(name => {
@@ -739,7 +739,6 @@
                     }
                 );
 
-                // Drag & Drop für Desktop & Touch
                 el.draggable = true;
                 el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
                 el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
