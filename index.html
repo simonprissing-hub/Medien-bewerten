@@ -36,14 +36,12 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 1. Verhindert das Markieren von Text beim langen Drücken */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
         }
 
-        /* 2. Visuelle Anzeige für Drag & Drop */
         .drag-over {
             background-color: var(--border-color) !important;
             border-radius: 8px;
@@ -144,7 +142,6 @@
             font-size: 16px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        /* 4. Fix für das Datumsfeld (Verhindert doppelte UI-Elemente) */
         input[type="date"] {
             box-sizing: border-box;
             appearance: none;
@@ -285,7 +282,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (Modular via Import Map for Browser usage) -->
+    <!-- Firebase SDK -->
     <script type="importmap">
       {
         "imports": {
@@ -332,82 +329,90 @@
             localStorage.setItem('theme', newTheme);
         };
 
-        // 5. Hilfsfunktionen zum Blockieren des Scrollens im Hintergrund
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { document.body.style.overflow = ''; }
 
-        // 1. Hilfsfunktion für langes Drücken & Drag-and-Drop Kompatibilität
+        // PERFEKTIONIERTE LONG-PRESS & DRAG LOGIK
         function setupLongPress(element, deleteCallback, clickCallback = null) {
             let pressTimer;
-            let isDragging = false;
+            let startX = 0, startY = 0;
             let ignoreNextClick = false;
+            let hasMoved = false;
 
             const startPress = (e) => {
-                // Status zurücksetzen, sobald der Finger aufgesetzt wird
-                ignoreNextClick = false; 
-                isDragging = false;
+                ignoreNextClick = false;
+                hasMoved = false;
+                
+                // Koordinaten speichern
+                if (e.touches && e.touches.length > 0) {
+                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+                } else if (e.clientX !== undefined) {
+                    startX = e.clientX; startY = e.clientY;
+                }
 
+                // Timer auf 1 Sekunde setzen. 
+                // Das gibt dem User genug Zeit loszuziehen. Bleibt er still, wird gelöscht.
                 pressTimer = window.setTimeout(() => {
-                    if (isDragging) return; // Abbrechen, falls der Nutzer bereits zieht
+                    if (hasMoved) return; // Abbrechen, wenn gezogen wurde!
                     
-                    ignoreNextClick = true; // Den unmittelbar folgenden Klick zwingend blockieren
-                    
-                    // Ein minimaler Delay gibt dem Browser Zeit, die Touch-Events sauber 
-                    // abzuschließen, bevor das blockierende Confirm-Fenster den Prozess einfriert.
+                    ignoreNextClick = true; 
                     setTimeout(() => {
                         if(confirm("Möchtest du dieses Element wirklich löschen?")) {
                             deleteCallback();
                         }
                     }, 10);
-                    
-                }, 800); // Zeit auf 800ms erhöht, um dem "Drag"-Event den Vorrang zu geben
+                }, 1000); 
             };
 
-            const cancelPress = () => {
-                if (pressTimer) clearTimeout(pressTimer);
+            const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+            // Berechnet, ob sich der Finger/die Maus signifikant bewegt hat (mehr als 15 Pixel)
+            const checkMovement = (e) => {
+                let currentX = startX, currentY = startY;
+                
+                if (e.touches && e.touches.length > 0) {
+                    currentX = e.touches[0].clientX; currentY = e.touches[0].clientY;
+                } else if (e.clientX !== undefined) {
+                    currentX = e.clientX; currentY = e.clientY;
+                }
+                
+                // Fehlerhafte 0-Werte bei manchen Drag-Events ignorieren
+                if (currentX === 0 && currentY === 0) return; 
+
+                // 15 Pixel Toleranz: Ist es ein Drag (Ziehen) oder ein Wackeln beim Drücken?
+                if (Math.abs(currentX - startX) > 15 || Math.abs(currentY - startY) > 15) {
+                    hasMoved = true;
+                    cancelPress(); // Lösch-Timer sofort killen, da User scrollt oder verschiebt!
+                }
             };
 
             // Touch & Maus Events
             element.addEventListener('touchstart', startPress, { passive: true });
-            element.addEventListener('touchend', cancelPress);
-            // Sobald sich der Finger bewegt (wischen/ziehen), den Lösch-Timer sofort abbrechen!
-            element.addEventListener('touchmove', cancelPress, { passive: true });
-            
             element.addEventListener('mousedown', startPress);
+            
+            element.addEventListener('touchend', cancelPress);
             element.addEventListener('mouseup', cancelPress);
             element.addEventListener('mouseleave', cancelPress);
+            
+            element.addEventListener('touchmove', checkMovement, { passive: true });
+            element.addEventListener('mousemove', checkMovement, { passive: true });
 
-            // --- HTML5 Drag & Drop Erkennung ---
-            // Wenn das Element gegriffen und gezogen wird, bricht das den Lösch-Timer sofort ab.
-            element.addEventListener('dragstart', (e) => {
-                isDragging = true;
-                cancelPress();
-            });
-            element.addEventListener('dragend', (e) => {
-                isDragging = false;
-                setTimeout(() => { ignoreNextClick = false; }, 100);
-            });
+            // HTML5 Drag Events (damit der Timer auch gekillt wird, wenn das native Drag startet und sich bewegt)
+            element.addEventListener('drag', checkMovement, { passive: true });
+            element.addEventListener('dragend', () => { setTimeout(() => { ignoreNextClick = false; }, 100); });
 
-            // Rechtsklick-Fallback (wird auf einigen Geräten bei Long Press gefeuert)
+            // Kontextmenü-Fallback
             element.oncontextmenu = (e) => { 
-                e.preventDefault(); 
-                cancelPress();
-                ignoreNextClick = true;
+                e.preventDefault(); cancelPress(); ignoreNextClick = true;
                 if(confirm("Möchtest du dieses Element wirklich löschen?")) deleteCallback(); 
             };
 
-            // Klick-Logik, die sich merkt, ob vorher abgebrochen wurde
+            // Klick-Logik
             if (clickCallback) {
                 element.addEventListener('click', (e) => {
                     cancelPress();
-                    
-                    // Wenn ignoreNextClick true ist (weil das Lösch-Menü offen war),
-                    // wird der Klick hier komplett vernichtet.
                     if (ignoreNextClick) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        ignoreNextClick = false; // Zurücksetzen für den nächsten regulären Tap
-                        return false;
+                        e.preventDefault(); e.stopPropagation(); ignoreNextClick = false; return false;
                     }
                     clickCallback(e);
                 });
@@ -457,19 +462,17 @@
                 el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
                 el.innerText = tab.name;
                 
-                // 1. Long Press & Click einrichten
                 setupLongPress(
                     el, 
-                    () => { // Delete action
+                    () => { 
                         deleteDoc(doc(db, "tabs", tab.id));
                         if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
                     },
-                    () => { // Click action
+                    () => { 
                         state.currentTabId = tab.id; renderTabs(); renderMovies(); 
                     }
                 );
 
-                // 2. Drag & Drop mit visueller Anzeige
                 el.draggable = true;
                 el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
                 el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
@@ -522,7 +525,7 @@
                     : `🎬`;
 
                 const el = document.createElement('div');
-                el.className = 'movie-row no-select'; // Textmarkierung verhindern
+                el.className = 'movie-row no-select'; 
                 el.innerHTML = `
                     <div class="movie-poster">${imgHtml}</div>
                     <div class="movie-info">
@@ -532,7 +535,6 @@
                     </div>
                 `;
                 
-                // 1. Long Press & Click einrichten (Löschen & Öffnen)
                 setupLongPress(
                     el,
                     () => { deleteDoc(doc(db, "movies", movie.id)); },
@@ -595,7 +597,7 @@
         };
 
         function openMovieEditor(movie) {
-            lockScroll(); // 5. Hintergrundscrollen blockieren
+            lockScroll();
             state.editingMovieId = movie ? movie.id : null;
             document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
             
@@ -646,7 +648,6 @@
                 el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
                 el.innerText = cat.name;
                 
-                // 1. Long Press & Click für Vorlagen
                 setupLongPress(
                     el,
                     () => { deleteDoc(doc(db, "categories", cat.id)); },
@@ -663,7 +664,6 @@
                     }
                 );
 
-                // 2. Drag & Drop auch für Vorlagen!
                 el.draggable = true;
                 el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
                 el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
@@ -741,7 +741,7 @@
         document.getElementById('cancelSimpleModalBtn').onclick = () => { DOM.simpleModal.classList.remove('active'); unlockScroll(); };
         
         function openSimpleModal(type, item) {
-            lockScroll(); // 5. Hintergrundscrollen blockieren
+            lockScroll(); 
             const titleEl = document.getElementById('simpleModalTitle');
             const bodyEl = document.getElementById('simpleModalBody');
             const saveBtn = document.getElementById('saveSimpleModalBtn');
@@ -763,7 +763,6 @@
                     }
                 };
             } else if (type === 'Category') {
-                // 3. Einzelne Felder für neue Kriterien
                 bodyEl.innerHTML = `
                     <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" style="margin-bottom: 20px;">
                     <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
@@ -778,9 +777,7 @@
                 document.getElementById('addCatCritBtn').onclick = () => {
                     const cont = document.getElementById('newCatCriteriaContainer');
                     const div = document.createElement('div');
-                    div.className = 'flex-row';
-                    div.style.marginBottom = '10px';
-                    div.style.gap = '10px';
+                    div.className = 'flex-row'; div.style.marginBottom = '10px'; div.style.gap = '10px';
                     div.innerHTML = `
                         <input type="text" class="input-text cat-crit-input" placeholder="Neues Kriterium">
                         <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="padding: 10px;">🗑</button>
