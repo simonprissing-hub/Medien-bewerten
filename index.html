@@ -48,10 +48,12 @@
             -webkit-touch-callout: none;
         }
 
-        .drag-over {
+        /* Visueller Zustand beim Ziehen (Platzhalter-Effekt) */
+        .is-dragging {
+            opacity: 0.4;
             background-color: var(--border-color) !important;
-            border-radius: 8px;
-            opacity: 0.7;
+            border: 2px dashed var(--accent-color);
+            box-shadow: none !important;
         }
 
         /* Typography & Layout */
@@ -359,8 +361,8 @@
             movieForm: { title: "", imageData: null, watchedDate: null, targetTabId: null, selectedCategoryId: null, criteria: [] }
         };
 
-        // --- Globaler Drag-Status ---
-        let dragSrc = { index: null, type: null };
+        // --- Drag & Drop Live-Referenz ---
+        let dragEl = null;
 
         const DOM = {
             tabBar: document.getElementById('tabBar'), movieList: document.getElementById('movieList'),
@@ -429,7 +431,7 @@
 
         document.getElementById('actionMenuDeleteBtn').onclick = () => {
             actionMenuModal.classList.remove('active');
-            if (activeDeleteCallback) activeDeleteCallback(); // Ruft den Callback auf, der das Delete Modal öffnet
+            if (activeDeleteCallback) activeDeleteCallback();
         };
 
         document.getElementById('actionMenuCancelBtn').onclick = () => {
@@ -490,7 +492,6 @@
             element.addEventListener('mouseleave', onEnd);
 
             element.addEventListener('dragstart', () => { clearTimer(); longPressTriggered = false; });
-
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (onClick) {
@@ -501,13 +502,6 @@
                     onClick(e);
                 });
             }
-        }
-
-        function moveInArray(arr, fromIndex, toIndex) {
-            const result = [...arr];
-            const [moved] = result.splice(fromIndex, 1);
-            result.splice(toIndex, 0, moved);
-            return result;
         }
 
         // Firebase Sync
@@ -545,13 +539,14 @@
             } catch (e) {}
         }
 
-        // Render Tabs
+        // Render Tabs mit Live-Verschiebung
         function renderTabs() {
             DOM.tabBar.innerHTML = '';
-            state.tabs.forEach((tab, index) => {
+            state.tabs.forEach((tab) => {
                 const el = document.createElement('div');
                 el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
                 el.innerText = tab.name;
+                el.setAttribute('data-id', tab.id);
                 
                 setupLongPress(
                     el, 
@@ -567,26 +562,34 @@
 
                 el.draggable = true;
                 el.ondragstart = (e) => { 
-                    dragSrc = { index: index, type: 'tab' };
+                    dragEl = el;
+                    dragEl.classList.add('is-dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                el.ondragenter = (e) => { e.preventDefault(); }; 
-                el.ondragover = (e) => { 
-                    e.preventDefault(); 
-                    if(dragSrc.type === 'tab') el.classList.add('drag-over'); 
-                };
-                el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = (e) => {
+                
+                el.ondragover = (e) => {
                     e.preventDefault();
-                    el.classList.remove('drag-over');
-                    if (dragSrc.type !== 'tab' || dragSrc.index === null) return;
-                    
-                    const fromIndex = dragSrc.index;
-                    if (fromIndex !== index) {
-                        let newTabs = moveInArray(state.tabs, fromIndex, index);
-                        newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
+                    if (!dragEl || dragEl === el) return;
+                    const rect = el.getBoundingClientRect();
+                    const isAfter = (e.clientX - rect.left) > (rect.width / 2);
+                    if (isAfter) {
+                        DOM.tabBar.insertBefore(dragEl, el.nextSibling);
+                    } else {
+                        DOM.tabBar.insertBefore(dragEl, el);
                     }
-                    dragSrc = { index: null, type: null };
+                };
+
+                el.ondragend = () => {
+                    if (dragEl) dragEl.classList.remove('is-dragging');
+                    dragEl = null;
+
+                    const tabElements = Array.from(DOM.tabBar.querySelectorAll('.tab-item:not(.add-tab-btn)'));
+                    tabElements.forEach((tabEl, index) => {
+                        const tabId = tabEl.getAttribute('data-id');
+                        if (tabId) {
+                            updateDoc(doc(db, "tabs", tabId), { orderIndex: index });
+                        }
+                    });
                 };
 
                 DOM.tabBar.appendChild(el);
@@ -745,13 +748,15 @@
             DOM.movieModal.classList.add('active');
         }
 
+        // Render Categories mit Live-Verschiebung im Grid
         function renderEditorCategories() {
             const list = document.getElementById('categoryList');
             list.innerHTML = '';
-            state.categories.forEach((cat, index) => {
+            state.categories.forEach((cat) => {
                 const el = document.createElement('div');
                 el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
                 el.innerText = cat.name;
+                el.setAttribute('data-id', cat.id);
                 
                 setupLongPress(
                     el,
@@ -776,26 +781,36 @@
 
                 el.draggable = true;
                 el.ondragstart = (e) => { 
-                    dragSrc = { index: index, type: 'category' };
+                    dragEl = el;
+                    dragEl.classList.add('is-dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                el.ondragenter = (e) => { e.preventDefault(); }; 
-                el.ondragover = (e) => { 
-                    e.preventDefault(); 
-                    if(dragSrc.type === 'category') el.classList.add('drag-over'); 
-                };
-                el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = (e) => {
+                
+                el.ondragover = (e) => {
                     e.preventDefault();
-                    el.classList.remove('drag-over');
-                    if (dragSrc.type !== 'category' || dragSrc.index === null) return;
+                    if (!dragEl || dragEl === el) return;
+                    const rect = el.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
                     
-                    const fromIndex = dragSrc.index;
-                    if (fromIndex !== index) {
-                        let newCats = moveInArray(state.categories, fromIndex, index);
-                        newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
+                    if (e.clientY < centerY || (e.clientY === centerY && e.clientX < centerX)) {
+                        list.insertBefore(dragEl, el);
+                    } else {
+                        list.insertBefore(dragEl, el.nextSibling);
                     }
-                    dragSrc = { index: null, type: null };
+                };
+
+                el.ondragend = () => {
+                    if (dragEl) dragEl.classList.remove('is-dragging');
+                    dragEl = null;
+
+                    const catElements = Array.from(list.querySelectorAll('.category-pill'));
+                    catElements.forEach((catEl, index) => {
+                        const catId = catEl.getAttribute('data-id');
+                        if (catId) {
+                            updateDoc(doc(db, "categories", catId), { orderIndex: index });
+                        }
+                    });
                 };
 
                 list.appendChild(el);
