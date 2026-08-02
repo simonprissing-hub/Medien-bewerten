@@ -287,7 +287,7 @@
     </div>
 
     <!-- Small Modal (Tabs / Categories) -->
-    <div class="modal-overlay" id="simpleModal">
+    <div class="modal-overlay" id="simpleModal" style="z-index: 1800;">
         <div class="modal-content" style="height: auto; max-width: 400px; margin: auto; border-radius: 12px;">
             <div class="modal-header">
                 <button type="button" class="btn-text btn-cancel" id="cancelSimpleModalBtn">Abbrechen</button>
@@ -356,13 +356,15 @@
             movieForm: { title: "", imageData: null, watchedDate: null, targetTabId: null, selectedCategoryId: null, criteria: [] }
         };
 
+        // --- Globaler Drag-Status (Verhindert Fehler bei Links-nach-Rechts Verschiebungen) ---
+        let dragSrc = { index: null, type: null };
+
         const DOM = {
             tabBar: document.getElementById('tabBar'), movieList: document.getElementById('movieList'),
             themeBtn: document.getElementById('themeToggleBtn'), movieModal: document.getElementById('movieModal'),
             simpleModal: document.getElementById('simpleModal')
         };
 
-        // Theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
         DOM.themeBtn.onclick = () => {
@@ -371,7 +373,6 @@
             localStorage.setItem('theme', newTheme);
         };
 
-        // Scroll Lock Management
         function lockScroll() { document.body.style.overflow = 'hidden'; }
         function unlockScroll() { 
             if (document.querySelectorAll('.modal-overlay.active').length === 0) {
@@ -431,7 +432,7 @@
             unlockScroll();
         };
 
-        // --- LONG PRESS LOGIK ---
+        // --- PERFEKTE LONG PRESS LOGIK ---
         function setupLongPress(element, onEdit, onDelete, onClick) {
             let pressTimer = null;
             let longPressTriggered = false;
@@ -440,7 +441,13 @@
             const clearTimer = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
 
             const onStart = (e) => {
-                if (document.querySelector('.modal-overlay.active')) return; 
+                // Nur blockieren, wenn wirklich ein Einstellungsmenü offen ist! (Vorher wurde hier auch das Film-Modal blockiert)
+                if (document.getElementById('actionMenuModal').classList.contains('active') ||
+                    document.getElementById('customDeleteModal').classList.contains('active') ||
+                    document.getElementById('simpleModal').classList.contains('active')) {
+                    return;
+                }
+                
                 clearTimer(); 
                 longPressTriggered = false;
                 
@@ -452,7 +459,7 @@
                     longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                     openActionMenu(onEdit, onDelete);
-                }, 600);
+                }, 500); // 500ms für knackiges Feedback
             };
 
             const onMove = (e) => {
@@ -461,7 +468,8 @@
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
-                if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
+                // Sobald sich der Finger auch nur 5px bewegt -> langes Drücken abbrechen, Drag&Drop übernehmen lassen!
+                if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) {
                     clearTimer();
                 }
             };
@@ -478,6 +486,9 @@
             element.addEventListener('mouseup', onEnd);
             element.addEventListener('mouseleave', onEnd);
 
+            // GANZ WICHTIG: Wenn Dragging startet, sofort langes Drücken abbrechen
+            element.addEventListener('dragstart', () => { clearTimer(); longPressTriggered = false; });
+
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (onClick) {
@@ -490,6 +501,14 @@
             }
         }
 
+        // Hilfsfunktion: Zuverlässiges Verschieben im Array in beide Richtungen
+        function moveInArray(arr, fromIndex, toIndex) {
+            const result = [...arr];
+            const [moved] = result.splice(fromIndex, 1);
+            result.splice(toIndex, 0, moved);
+            return result;
+        }
+
         // Firebase Sync
         onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
             (snapshot) => {
@@ -498,15 +517,13 @@
                 if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
                 renderTabs(); renderMovies();
             },
-            (error) => { console.error(error); alert("Fehler beim Laden der Tabs: " + error.message); }
+            (error) => { console.error(error); }
         );
 
         onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
             (snapshot) => {
                 state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.movieForm.targetTabId || document.getElementById('movieModal').classList.contains('active')) {
-                    renderEditorCategories();
-                }
+                if (state.movieForm.targetTabId) renderEditorCategories();
             },
             (error) => { console.error(error); }
         );
@@ -537,28 +554,36 @@
                 
                 setupLongPress(
                     el, 
-                    () => { openSimpleModal('EditTab', tab); },
-                    () => {
+                    () => { openSimpleModal('EditTab', tab); }, 
+                    () => { 
                         deleteDoc(doc(db, "tabs", tab.id));
                         if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
                     },
-                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); }
+                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } 
                 );
 
                 el.draggable = true;
-                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragstart = (e) => { 
+                    dragSrc = { index: index, type: 'tab' };
+                    e.dataTransfer.effectAllowed = 'move';
+                };
+                el.ondragenter = (e) => { e.preventDefault(); }; // Erlaubt auch Links-nach-Rechts Verschieben!
+                el.ondragover = (e) => { 
+                    e.preventDefault(); 
+                    if(dragSrc.type === 'tab') el.classList.add('drag-over'); 
+                };
                 el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = async (e) => {
+                el.ondrop = (e) => {
                     e.preventDefault();
                     el.classList.remove('drag-over');
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index && !isNaN(fromIndex)) {
-                        let newTabs = [...state.tabs];
-                        const [moved] = newTabs.splice(fromIndex, 1);
-                        newTabs.splice(index, 0, moved);
+                    if (dragSrc.type !== 'tab' || dragSrc.index === null) return;
+                    
+                    const fromIndex = dragSrc.index;
+                    if (fromIndex !== index) {
+                        let newTabs = moveInArray(state.tabs, fromIndex, index);
                         newTabs.forEach((t, i) => updateDoc(doc(db, "tabs", t.id), { orderIndex: i }));
                     }
+                    dragSrc = { index: null, type: null };
                 };
 
                 DOM.tabBar.appendChild(el);
@@ -713,7 +738,6 @@
             DOM.movieModal.classList.add('active');
         }
 
-        // Render Category Pills (mit Long Press für Bearbeiten/Löschen & Drag & Drop)
         function renderEditorCategories() {
             const list = document.getElementById('categoryList');
             list.innerHTML = '';
@@ -724,9 +748,9 @@
                 
                 setupLongPress(
                     el,
-                    () => { openSimpleModal('EditCategory', cat); }, // Bearbeiten
-                    () => { deleteDoc(doc(db, "categories", cat.id)); }, // Löschen
-                    () => { // Klick (Auswählen)
+                    () => { openSimpleModal('EditCategory', cat); }, 
+                    () => { deleteDoc(doc(db, "categories", cat.id)); }, 
+                    () => { 
                         state.movieForm.selectedCategoryId = cat.id;
                         let newCriteria = [];
                         cat.criteriaNames.forEach(name => {
@@ -740,19 +764,27 @@
                 );
 
                 el.draggable = true;
-                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); };
-                el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+                el.ondragstart = (e) => { 
+                    dragSrc = { index: index, type: 'category' };
+                    e.dataTransfer.effectAllowed = 'move';
+                };
+                el.ondragenter = (e) => { e.preventDefault(); }; // Erlaubt Links-nach-Rechts Verschieben!
+                el.ondragover = (e) => { 
+                    e.preventDefault(); 
+                    if(dragSrc.type === 'category') el.classList.add('drag-over'); 
+                };
                 el.ondragleave = () => { el.classList.remove('drag-over'); };
-                el.ondrop = async (e) => {
+                el.ondrop = (e) => {
                     e.preventDefault();
                     el.classList.remove('drag-over');
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex !== index && !isNaN(fromIndex)) {
-                        let newCats = [...state.categories];
-                        const [moved] = newCats.splice(fromIndex, 1);
-                        newCats.splice(index, 0, moved);
+                    if (dragSrc.type !== 'category' || dragSrc.index === null) return;
+                    
+                    const fromIndex = dragSrc.index;
+                    if (fromIndex !== index) {
+                        let newCats = moveInArray(state.categories, fromIndex, index);
                         newCats.forEach((c, i) => updateDoc(doc(db, "categories", c.id), { orderIndex: i }));
                     }
+                    dragSrc = { index: null, type: null };
                 };
 
                 list.appendChild(el);
