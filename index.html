@@ -172,7 +172,7 @@
         
         .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
         
-        /* Category Pills - HIER WURDE DER ZEILENUMBRUCH EINGESTELLT */
+        /* Category Pills - Mehrere Reihen durch flex-wrap */
         .category-scroll { 
             display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 5px; 
         }
@@ -318,7 +318,7 @@
             <div class="modal-body" style="text-align: center; padding: 25px 20px;">
                 <div style="font-size: 40px; margin-bottom: 10px;">🗑️</div>
                 <h3 style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <p id="deleteModalText" style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px; word-break: break-word;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
                     <button type="button" class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top: 0; flex: 1;">Löschen</button>
@@ -383,13 +383,15 @@
             }
         }
 
-        // --- Custom Delete Modal Logik ---
+        // --- Custom Delete Modal Logik mit Objektnamen ---
         let activeDeleteAction = null;
         const deleteModal = document.getElementById('customDeleteModal');
+        const deleteModalText = document.getElementById('deleteModalText');
         deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
         
-        function openDeleteModal(onConfirmCallback) {
+        function openDeleteModal(objectName, onConfirmCallback) {
             activeDeleteAction = onConfirmCallback;
+            deleteModalText.innerHTML = `Möchtest du <b>"${objectName}"</b> wirklich unwiderruflich löschen?`;
             deleteModal.classList.add('active');
             lockScroll();
         }
@@ -427,7 +429,7 @@
 
         document.getElementById('actionMenuDeleteBtn').onclick = () => {
             actionMenuModal.classList.remove('active');
-            if (activeDeleteCallback) openDeleteModal(activeDeleteCallback);
+            if (activeDeleteCallback) activeDeleteCallback(); // Ruft den Callback auf, der das Delete Modal öffnet
         };
 
         document.getElementById('actionMenuCancelBtn').onclick = () => {
@@ -555,8 +557,10 @@
                     el, 
                     () => { openSimpleModal('EditTab', tab); }, 
                     () => { 
-                        deleteDoc(doc(db, "tabs", tab.id));
-                        if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
+                        openDeleteModal(tab.name, () => {
+                            deleteDoc(doc(db, "tabs", tab.id));
+                            if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
+                        });
                     },
                     () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } 
                 );
@@ -635,7 +639,11 @@
                 setupLongPress(
                     el,
                     () => { openMovieEditor(movie); },
-                    () => { deleteDoc(doc(db, "movies", movie.id)); },
+                    () => { 
+                        openDeleteModal(movie.title, () => {
+                            deleteDoc(doc(db, "movies", movie.id));
+                        });
+                    },
                     () => { openMovieEditor(movie); }
                 );
 
@@ -723,7 +731,7 @@
             if (movie) {
                 delBtn.style.display = 'block';
                 delBtn.onclick = () => {
-                    openDeleteModal(() => {
+                    openDeleteModal(movie.title, () => {
                         deleteDoc(doc(db, "movies", movie.id));
                         DOM.movieModal.classList.remove('active');
                         unlockScroll();
@@ -748,7 +756,11 @@
                 setupLongPress(
                     el,
                     () => { openSimpleModal('EditCategory', cat); }, 
-                    () => { deleteDoc(doc(db, "categories", cat.id)); }, 
+                    () => { 
+                        openDeleteModal(cat.name, () => {
+                            deleteDoc(doc(db, "categories", cat.id));
+                        });
+                    }, 
                     () => { 
                         state.movieForm.selectedCategoryId = cat.id;
                         let newCriteria = [];
