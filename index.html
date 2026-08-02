@@ -172,8 +172,11 @@
         
         .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
         
-        /* Category Pills */
-        .category-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        /* Category Pills - HIER WURDE DER ZEILENUMBRUCH EINGESTELLT */
+        .category-scroll { 
+            display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 5px; 
+        }
+        
         .category-pill {
             padding: 8px 16px; border-radius: 20px; background-color: var(--border-color);
             color: var(--text-primary); white-space: nowrap; cursor: pointer; font-size: 14px;
@@ -356,7 +359,7 @@
             movieForm: { title: "", imageData: null, watchedDate: null, targetTabId: null, selectedCategoryId: null, criteria: [] }
         };
 
-        // --- Globaler Drag-Status (Verhindert Fehler bei Links-nach-Rechts Verschiebungen) ---
+        // --- Globaler Drag-Status ---
         let dragSrc = { index: null, type: null };
 
         const DOM = {
@@ -441,7 +444,6 @@
             const clearTimer = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
 
             const onStart = (e) => {
-                // Nur blockieren, wenn wirklich ein Einstellungsmenü offen ist! (Vorher wurde hier auch das Film-Modal blockiert)
                 if (document.getElementById('actionMenuModal').classList.contains('active') ||
                     document.getElementById('customDeleteModal').classList.contains('active') ||
                     document.getElementById('simpleModal').classList.contains('active')) {
@@ -459,7 +461,7 @@
                     longPressTriggered = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                     openActionMenu(onEdit, onDelete);
-                }, 500); // 500ms für knackiges Feedback
+                }, 500);
             };
 
             const onMove = (e) => {
@@ -468,7 +470,6 @@
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
                 
-                // Sobald sich der Finger auch nur 5px bewegt -> langes Drücken abbrechen, Drag&Drop übernehmen lassen!
                 if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) {
                     clearTimer();
                 }
@@ -486,7 +487,6 @@
             element.addEventListener('mouseup', onEnd);
             element.addEventListener('mouseleave', onEnd);
 
-            // GANZ WICHTIG: Wenn Dragging startet, sofort langes Drücken abbrechen
             element.addEventListener('dragstart', () => { clearTimer(); longPressTriggered = false; });
 
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
@@ -501,7 +501,6 @@
             }
         }
 
-        // Hilfsfunktion: Zuverlässiges Verschieben im Array in beide Richtungen
         function moveInArray(arr, fromIndex, toIndex) {
             const result = [...arr];
             const [moved] = result.splice(fromIndex, 1);
@@ -567,7 +566,7 @@
                     dragSrc = { index: index, type: 'tab' };
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                el.ondragenter = (e) => { e.preventDefault(); }; // Erlaubt auch Links-nach-Rechts Verschieben!
+                el.ondragenter = (e) => { e.preventDefault(); }; 
                 el.ondragover = (e) => { 
                     e.preventDefault(); 
                     if(dragSrc.type === 'tab') el.classList.add('drag-over'); 
@@ -768,7 +767,7 @@
                     dragSrc = { index: index, type: 'category' };
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                el.ondragenter = (e) => { e.preventDefault(); }; // Erlaubt Links-nach-Rechts Verschieben!
+                el.ondragenter = (e) => { e.preventDefault(); }; 
                 el.ondragover = (e) => { 
                     e.preventDefault(); 
                     if(dragSrc.type === 'category') el.classList.add('drag-over'); 
