@@ -269,6 +269,52 @@
             font-weight: 500;
         }
         .action-menu-btn.danger { color: var(--danger-color); }
+
+        /* --- STYLES FÜR EINTRÄGE IM EINSTELLUNGS-MENÜ --- */
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin: 0 0 8px 4px;
+        }
+        .settings-group {
+            background: var(--input-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+        .settings-row-interactive {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .settings-row-interactive:active {
+            background-color: var(--surface-secondary);
+        }
+        .settings-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .settings-value {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
     </style>
 
     <!-- Polyfill: Macht natives Drag&Drop auf Touch-Geräten möglich! -->
@@ -306,26 +352,33 @@
                 <h3>Einstellungen</h3>
                 <div style="width: 50px;"></div>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <div class="section-title" style="margin-top: 0;">Erscheinungsbild</div>
-                    <button type="button" class="action-menu-btn" id="toggleThemeMenuBtn">
-                        Design wechseln (Hell/Dunkel)
-                    </button>
+            <div class="modal-body" style="padding: 20px 16px;">
+                
+                <!-- Kategorie 1: Erscheinungsbild -->
+                <div class="settings-section-title">Erscheinungsbild</div>
+                <div class="settings-group">
+                    <div class="settings-row settings-row-interactive" id="toggleThemeMenuBtn">
+                        <span class="settings-label">Design</span>
+                        <span class="settings-value">Hell / Dunkel 🌓</span>
+                    </div>
                 </div>
 
-                <div class="form-group" style="margin-top: 25px;">
-                    <div class="section-title">Speicher-Ersparnis (Bilder aufräumen)</div>
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
-                        Löscht automatisch Poster-Bilder von älteren Einträgen aus der Datenbank, um Speicherplatz zu sparen. Titel, Notizen und Sterne-Bewertungen bleiben erhalten.
-                    </p>
-                    <select class="input-text" id="autoDeleteSelect">
-                        <option value="never">Bilder nie automatisch löschen</option>
-                        <option value="3">Bilder älter als 3 Monate löschen</option>
-                        <option value="6">Bilder älter als 6 Monate löschen</option>
-                        <option value="12">Bilder älter als 12 Monate löschen</option>
-                    </select>
+                <!-- Kategorie 2: Speicherplatz -->
+                <div class="settings-section-title">Speicherplatz</div>
+                <div class="settings-group">
+                    <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                        <span class="settings-label">Bilder-Auto-Löschung</span>
+                        <select class="input-text" id="autoDeleteSelect" style="margin: 0; font-size: 14px; cursor: pointer;">
+                            <option value="never">Nie</option>
+                            <option value="1">Älter als 1 Monat</option>
+                            <option value="3">Älter als 3 Monate</option>
+                            <option value="6">Älter als 6 Monate (Standard)</option>
+                            <option value="12">Älter als 12 Monate</option>
+                            <option value="24">Älter als 24 Monate</option>
+                        </select>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -494,7 +547,8 @@
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
 
-        const savedAutoDelete = localStorage.getItem('autoDeleteSetting') || 'never';
+        // Standard auf "6" (Monate) setzen, falls noch nichts hinterlegt ist
+        const savedAutoDelete = localStorage.getItem('autoDeleteSetting') || '6';
         DOM.autoDeleteSelect.value = savedAutoDelete;
 
         DOM.mainMenuBtn.onclick = () => {
@@ -528,7 +582,7 @@
 
         // Speicher-Ersparnis-Logik: Löscht nur das Bild älterer Einträge aus Firestore
         async function runAutoDeleteCleanup(movies) {
-            const setting = localStorage.getItem('autoDeleteSetting') || 'never';
+            const setting = localStorage.getItem('autoDeleteSetting') || '6';
             if (setting === 'never' || !movies || movies.length === 0) return;
 
             const months = parseInt(setting);
