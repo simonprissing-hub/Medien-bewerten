@@ -749,7 +749,8 @@
         document.getElementById('addMovieBtn').onclick = () => openMovieEditor(null);
         document.getElementById('cancelMovieBtn').onclick = () => { DOM.movieModal.classList.remove('active'); unlockScroll(); };
         document.getElementById('addCriterionBtn').onclick = () => {
-            state.movieForm.criteria.push({ id: Date.now().toString(), name: "Neues Kriterium", stars: 0, notes: "" });
+            // Hier wird das name-Feld nun leer übergeben (""), anstatt "Neues Kriterium" vorzufertigen.
+            state.movieForm.criteria.push({ id: Date.now().toString(), name: "", stars: 0, notes: "" });
             renderEditorCriteria();
         };
 
@@ -907,9 +908,10 @@
                 let starsHtml = '';
                 for(let i=1; i<=5; i++) starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
 
+                // Hier wurde der placeholder="Neues Kriterium" dem input hinzugefügt
                 card.innerHTML = `
                     <div class="criterion-header">
-                        <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" value="${crit.name}">
+                        <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${crit.name}">
                         <div class="stars">${starsHtml}</div>
                         <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
                     </div>
