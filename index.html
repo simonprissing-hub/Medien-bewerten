@@ -95,7 +95,7 @@
         .header h1 { font-size: 20px; font-weight: 600; }
         .header-actions button {
             background: none; border: none; color: var(--accent-color);
-            font-size: 24px; cursor: pointer; margin-left: 15px;
+            font-size: 24px; cursor: pointer; margin-left: 15px; display: inline-flex; align-items: center;
         }
 
         /* Tabs */
@@ -133,8 +133,8 @@
             font-size: 30px; overflow: hidden;
         }
         .movie-poster img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
-        .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+        .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; overflow: hidden; }
+        .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .movie-rating { color: var(--star-color); font-weight: 600; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
         .movie-date { font-size: 12px; color: var(--text-secondary); }
         .empty-state { text-align: center; padding: 50px 20px; color: var(--text-secondary); }
@@ -204,6 +204,7 @@
         .input-text:focus {
             border-color: var(--accent-color);
         }
+        select.input-text { appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238e8e93%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center; background-size: 12px auto; padding-right: 40px; }
 
         input[type="date"] {
             box-sizing: border-box;
@@ -280,7 +281,12 @@
     <div class="header">
         <h1>Mein Filmtagebuch</h1>
         <div class="header-actions">
-            <button type="button" id="themeToggleBtn">◑</button>
+            <!-- Drei-Punkte-Menü statt Theme-Button -->
+            <button type="button" id="mainMenuBtn" aria-label="Menü">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                    <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                </svg>
+            </button>
             <button type="button" id="addMovieBtn">＋</button>
         </div>
     </div>
@@ -295,6 +301,7 @@
 
     <!-- Movie Editor Modal -->
     <div class="modal-overlay" id="movieModal">
+        <!-- ... (Der restliche HTML-Code für das Modal bleibt identisch) ... -->
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="btn-text btn-cancel" id="cancelMovieBtn">Abbrechen</button>
@@ -360,6 +367,55 @@
         </div>
     </div>
 
+    <!-- Hauptmenü (Einstellungen) Modal -->
+    <div class="modal-overlay" id="mainMenuModal" style="z-index: 1850;">
+        <div class="modal-content modal-dialog-sm" style="padding: 20px;">
+            <h3 style="margin-bottom: 20px; margin-top: 0; text-align: center;">Einstellungen</h3>
+            
+            <button type="button" class="action-menu-btn" id="menuThemeBtn">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/></svg>
+                Design wechseln
+            </button>
+            
+            <button type="button" class="action-menu-btn" id="menuAutoDeleteBtn" style="flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                    Bilder automatisch löschen
+                </div>
+                <span id="menuAutoDeleteSubtitle" style="font-size: 12px; color: var(--text-secondary); font-weight: 400;">Nach 6 Monaten (Standard)</span>
+            </button>
+
+            <button type="button" class="action-menu-btn" id="menuCloseBtn" style="margin-top: 15px; font-weight: bold; background: transparent; border-color: transparent;">Schließen</button>
+        </div>
+    </div>
+
+    <!-- Auto-Delete Settings Modal -->
+    <div class="modal-overlay" id="autoDeleteModal" style="z-index: 1860;">
+        <div class="modal-content modal-dialog-sm" style="padding: 20px;">
+            <h3 style="margin-bottom: 10px; margin-top: 0; text-align: center;">Bilder aufräumen</h3>
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
+                Um Speicherplatz zu sparen, können Bilder alter Einträge automatisch gelöscht werden. Die Filme und deine Bewertungen bleiben dabei komplett erhalten!
+            </p>
+            
+            <div class="form-group">
+                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Zeitraum für Bild-Löschung:</label>
+                <select id="autoDeleteSelect" class="input-text">
+                    <option value="never">Nie löschen</option>
+                    <option value="1">Nach 1 Monat</option>
+                    <option value="3">Nach 3 Monaten</option>
+                    <option value="6">Nach 6 Monaten (Standard)</option>
+                    <option value="12">Nach 12 Monaten</option>
+                    <option value="24">Nach 24 Monaten</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn-primary" id="autoDeleteCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
+                <button type="button" class="btn-primary" id="autoDeleteSave" style="margin-top: 0; flex: 1;">Speichern</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Small Modal (Tabs / Vorlagen / Categories) -->
     <div class="modal-overlay" id="simpleModal" style="z-index: 1800;">
         <div class="modal-content modal-dialog-sm">
@@ -385,7 +441,7 @@
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                 Löschen
             </button>
-            <button type="button" class="action-menu-btn" id="actionMenuCancelBtn" style="margin-top: 10px; font-weight: bold; background: transparent;">Abbrechen</button>
+            <button type="button" class="action-menu-btn" id="actionMenuCancelBtn" style="margin-top: 10px; font-weight: bold; background: transparent; border-color: transparent;">Abbrechen</button>
         </div>
     </div>
 
@@ -398,681 +454,583 @@
                         <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                     </svg>
                 </div>
-                <h3 style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
-                <p id="deleteModalText" style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px; word-break: break-word;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <h3 id="deleteModalTitle" style="margin-bottom: 10px;">Löschen bestätigen</h3>
+                <p id="deleteModalMessage" style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px; line-height: 1.4;">Bist du sicher?</p>
                 <div style="display: flex; gap: 10px;">
-                    <button type="button" class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
-                    <button type="button" class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top: 0; flex: 1;">Löschen</button>
+                    <button type="button" class="btn-primary" id="deleteModalCancel" style="background: var(--surface-secondary); color: var(--text-primary); margin-top:0;">Abbrechen</button>
+                    <button type="button" class="btn-primary" id="deleteModalConfirm" style="background: var(--danger-color); margin-top:0;">Löschen</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="importmap">
-      {
-        "imports": {
-          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-        }
-      }
-    </script>
 
     <script type="module">
-        import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } 
+        from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
+        // *** DEINE FIREBASE CONFIG HIER EINFÜGEN ***
         const firebaseConfig = {
-            apiKey: "AIzaSyBbfhbNAAtz-H3gvXYDECvmnCSQznkBWDA",
-            authDomain: "medien-bewerten.firebaseapp.com",
-            projectId: "medien-bewerten",
-            storageBucket: "medien-bewerten.firebasestorage.app",
-            messagingSenderId: "494393371345",
-            appId: "1:494393371345:web:076bdefc2b0601fc7e33f0"
+            apiKey: "AIzaSyDEINE_API_KEY",
+            authDomain: "deine-app.firebaseapp.com",
+            projectId: "deine-app-id",
+            storageBucket: "deine-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // State Management
         let state = {
-            tabs: [], categories: [], movies: [],
-            currentTabId: null, editingMovieId: null,
-            movieForm: { title: "", imageData: null, watchedDate: null, tabID: null, selectedCategoryId: null, criteria: [] }
+            movies: [],
+            tabs: ["Filme", "Serien", "Dokus"],
+            activeTab: "Filme",
+            categories: [
+                { id: "cat1", name: "Standard-Film", criteria: [{ id: "c1", name: "Story", rating: 0, text: "" }, { id: "c2", name: "Bild & Ton", rating: 0, text: "" }, { id: "c3", name: "Schauspieler", rating: 0, text: "" }] },
+                { id: "cat2", name: "Serie", criteria: [{ id: "c4", name: "Spannung", rating: 0, text: "" }, { id: "c5", name: "Charaktere", rating: 0, text: "" }] }
+            ],
+            currentMovie: null, 
+            editingMovieId: null,
+            contextMenuTarget: null, 
+            initialMoviesLoaded: false
         };
 
-        const trashIconSvg = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const getDefaultCriteria = () => [{ id: generateId(), name: "Story", rating: 0, text: "" }];
+        const loadCategories = () => { const s = localStorage.getItem('movieCategories'); if (s) state.categories = JSON.parse(s); };
+        const saveCategories = () => { localStorage.setItem('movieCategories', JSON.stringify(state.categories)); };
+        const loadTabs = () => { const s = localStorage.getItem('movieTabs'); if (s) state.tabs = JSON.parse(s); };
+        const saveTabs = () => { localStorage.setItem('movieTabs', JSON.stringify(state.tabs)); };
 
-        // --- Drag & Drop Live-Referenz ---
-        let dragEl = null;
+        // THEME & SETTINGS LOGIC
+        const theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 
-        const DOM = {
-            tabBar: document.getElementById('tabBar'), movieList: document.getElementById('movieList'),
-            themeBtn: document.getElementById('themeToggleBtn'), movieModal: document.getElementById('movieModal'),
-            simpleModal: document.getElementById('simpleModal')
-        };
+        let autoDeleteSetting = localStorage.getItem('autoDeleteImages') || '6';
 
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.body.setAttribute('data-theme', savedTheme);
-        DOM.themeBtn.onclick = () => {
-            const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-            document.body.setAttribute('data-theme', newTheme);
+        function getAutoDeleteSubtitle(val) {
+            if(val === 'never') return 'Nie';
+            if(val === '1') return 'Nach 1 Monat';
+            if(val === '6') return 'Nach 6 Monaten (Standard)';
+            return `Nach ${val} Monaten`;
+        }
+
+        document.getElementById('menuAutoDeleteSubtitle').innerText = getAutoDeleteSubtitle(autoDeleteSetting);
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-        };
+            closeModal('mainMenuModal');
+        }
 
-        function lockScroll() { document.body.style.overflow = 'hidden'; }
-        function unlockScroll() { 
-            if (document.querySelectorAll('.modal-overlay.active').length === 0) {
+        // MENÜ EVENT LISTENERS
+        document.getElementById('mainMenuBtn').addEventListener('click', () => openModal('mainMenuModal'));
+        document.getElementById('menuCloseBtn').addEventListener('click', () => closeModal('mainMenuModal'));
+        document.getElementById('menuThemeBtn').addEventListener('click', toggleTheme);
+
+        document.getElementById('menuAutoDeleteBtn').addEventListener('click', () => {
+            document.getElementById('autoDeleteSelect').value = autoDeleteSetting;
+            closeModal('mainMenuModal');
+            openModal('autoDeleteModal');
+        });
+
+        document.getElementById('autoDeleteCancel').addEventListener('click', () => closeModal('autoDeleteModal'));
+        document.getElementById('autoDeleteSave').addEventListener('click', () => {
+            autoDeleteSetting = document.getElementById('autoDeleteSelect').value;
+            localStorage.setItem('autoDeleteImages', autoDeleteSetting);
+            document.getElementById('menuAutoDeleteSubtitle').innerText = getAutoDeleteSubtitle(autoDeleteSetting);
+            closeModal('autoDeleteModal');
+            runAutoDeleteCleanup(); // Direkt ausführen, falls durch die Änderung Bilder fällig werden
+        });
+
+        // BILDER AUFRÄUM-FUNKTION (Hintergrund-Aufgabe)
+        async function runAutoDeleteCleanup() {
+            if (autoDeleteSetting === 'never') return;
+            const months = parseInt(autoDeleteSetting);
+            if (isNaN(months)) return;
+
+            const cutoffDate = new Date();
+            cutoffDate.setMonth(cutoffDate.getMonth() - months);
+
+            let deletedCount = 0;
+
+            for (const movie of state.movies) {
+                // Nur bearbeiten, wenn ein Bild vorhanden ist
+                if (movie.imageData) {
+                    // Wir nutzen watchedDate falls vorhanden, sonst dateAdded
+                    const dateString = movie.watchedDate || movie.dateAdded;
+                    if (!dateString) continue;
+                    
+                    const movieDate = new Date(dateString);
+                    if (movieDate < cutoffDate) {
+                        try {
+                            // Update the Firestore document to only remove imageData
+                            await updateDoc(doc(db, "movies", movie.id), { imageData: null });
+                            deletedCount++;
+                            console.log(`Bild automatisch entfernt für: ${movie.title} (Älter als ${months} Monate)`);
+                        } catch(e) {
+                            console.error(`Fehler beim automatischen Löschen des Bildes von ${movie.title}:`, e);
+                        }
+                    }
+                }
+            }
+            if (deletedCount > 0) {
+                console.log(`Auto-Cleanup abgeschlossen: ${deletedCount} Bilder gelöscht.`);
+            }
+        }
+
+
+        // Scroll Lock
+        const lockScroll = () => { document.body.style.overflow = 'hidden'; };
+        const unlockScroll = () => { 
+            // Nur entsperren, wenn keine Modal-Overlays mehr aktiv sind
+            if (!document.querySelectorAll('.modal-overlay.active').length) {
                 document.body.style.overflow = ''; 
             }
-        }
+        };
 
-        // --- Custom Delete Modal Logik mit Objektnamen ---
-        let activeDeleteAction = null;
-        const deleteModal = document.getElementById('customDeleteModal');
-        const deleteModalText = document.getElementById('deleteModalText');
-        deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        const openModal = (id) => { 
+            const m = document.getElementById(id); m.classList.add('active'); 
+            lockScroll(); 
+            // Hack for Mobile Safari 100vh issue on keyboard open
+            setTimeout(() => { if(id==='movieModal') window.scrollTo(0, 0); }, 50);
+        };
+        const closeModal = (id) => { document.getElementById(id).classList.remove('active'); unlockScroll(); };
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) closeModal(overlay.id);
+            });
+        });
+
+        // INITIAL LOAD & FIREBASE SUBSCRIPTION
+        loadCategories();
+        loadTabs();
         
-        function openDeleteModal(objectName, onConfirmCallback) {
-            activeDeleteAction = onConfirmCallback;
-            deleteModalText.innerHTML = `Möchtest du <b>"${objectName}"</b> wirklich unwiderruflich löschen?`;
-            deleteModal.classList.add('active');
-            lockScroll();
-        }
-        
-        document.getElementById('deleteModalCancel').onclick = () => {
-            deleteModal.classList.remove('active');
-            activeDeleteAction = null;
-            unlockScroll();
-        };
-        
-        document.getElementById('deleteModalConfirm').onclick = () => {
-            if (activeDeleteAction) activeDeleteAction();
-            deleteModal.classList.remove('active');
-            activeDeleteAction = null;
-            unlockScroll();
-        };
-
-        // --- Aktions-Menü Logik (Bearbeiten/Löschen) ---
-        let activeEditCallback = null;
-        let activeDeleteCallback = null;
-        const actionMenuModal = document.getElementById('actionMenuModal');
-        actionMenuModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-
-        function openActionMenu(onEdit, onDelete) {
-            activeEditCallback = onEdit;
-            activeDeleteCallback = onDelete;
-            actionMenuModal.classList.add('active');
-            lockScroll();
-        }
-
-        document.getElementById('actionMenuEditBtn').onclick = () => {
-            actionMenuModal.classList.remove('active');
-            if (activeEditCallback) activeEditCallback();
-        };
-
-        document.getElementById('actionMenuDeleteBtn').onclick = () => {
-            actionMenuModal.classList.remove('active');
-            if (activeDeleteCallback) activeDeleteCallback();
-        };
-
-        document.getElementById('actionMenuCancelBtn').onclick = () => {
-            actionMenuModal.classList.remove('active');
-            unlockScroll();
-        };
-
-        // --- LONG PRESS LOGIK ---
-        function setupLongPress(element, onEdit, onDelete, onClick) {
-            let pressTimer = null;
-            let longPressTriggered = false;
-            let startX = 0, startY = 0;
-
-            const clearTimer = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
-
-            const onStart = (e) => {
-                if (document.getElementById('actionMenuModal').classList.contains('active') ||
-                    document.getElementById('customDeleteModal').classList.contains('active') ||
-                    document.getElementById('simpleModal').classList.contains('active')) {
-                    return;
-                }
-                
-                clearTimer(); 
-                longPressTriggered = false;
-                
-                const touch = e.touches ? e.touches[0] : e;
-                startX = touch.clientX || 0; 
-                startY = touch.clientY || 0;
-
-                pressTimer = setTimeout(() => {
-                    longPressTriggered = true;
-                    if (navigator.vibrate) navigator.vibrate(50);
-                    openActionMenu(onEdit, onDelete);
-                }, 500);
-            };
-
-            const onMove = (e) => {
-                if (!pressTimer) return;
-                const touch = e.touches ? e.touches[0] : e;
-                const currentX = touch.clientX || 0;
-                const currentY = touch.clientY || 0;
-                
-                if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) {
-                    clearTimer();
-                }
-            };
-
-            const onEnd = () => { clearTimer(); };
-
-            element.addEventListener('touchstart', onStart, { passive: true });
-            element.addEventListener('touchmove', onMove, { passive: true });
-            element.addEventListener('touchend', onEnd);
-            element.addEventListener('touchcancel', onEnd);
-
-            element.addEventListener('mousedown', onStart);
-            element.addEventListener('mousemove', onMove);
-            element.addEventListener('mouseup', onEnd);
-            element.addEventListener('mouseleave', onEnd);
-
-            element.addEventListener('dragstart', () => { clearTimer(); longPressTriggered = false; });
-            element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-
-            if (onClick) {
-                element.addEventListener('click', (e) => {
-                    if (longPressTriggered) {
-                        e.preventDefault(); e.stopPropagation(); return false;
-                    }
-                    onClick(e);
-                });
-            }
-        }
-
-        // Firebase Sync
-        onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
-            (snapshot) => {
-                state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.tabs.length === 0) setupDefaults();
-                if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
-                renderTabs(); renderMovies();
-            },
-            (error) => { console.error(error); }
-        );
-
-        onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
-            (snapshot) => {
-                state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.movieForm.tabID) renderEditorCategories();
-            },
-            (error) => { console.error(error); }
-        );
-
         onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), 
             (snapshot) => {
                 state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTabs();
                 renderMovies();
+                
+                // Cleanup einmalig nach dem ersten Laden ausführen
+                if (!state.initialMoviesLoaded) {
+                    state.initialMoviesLoaded = true;
+                    runAutoDeleteCleanup();
+                }
             },
-            (error) => { console.error(error); }
+            (error) => { console.error("Firebase Error:", error); }
         );
 
-        async function setupDefaults() {
-            try {
-                await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
-                await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
-                await addDoc(collection(db, "categories"), { name: "Standard", criteriaNames: ["Spannung", "Story", "Effekte"], orderIndex: 0 });
-            } catch (e) {}
-        }
-
-        // Render Tabs mit Live-Verschiebung
+        // --- Tabs ---
         function renderTabs() {
-            DOM.tabBar.innerHTML = '';
-            state.tabs.forEach((tab) => {
-                const el = document.createElement('div');
-                el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
-                el.innerText = tab.name;
-                el.setAttribute('data-id', tab.id);
-                
-                setupLongPress(
-                    el, 
-                    () => { openSimpleModal('EditTab', tab); }, 
-                    () => { 
-                        openDeleteModal(tab.name, () => {
-                            deleteDoc(doc(db, "tabs", tab.id));
-                            if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
-                        });
-                    },
-                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } 
-                );
-
-                el.draggable = true;
-                el.ondragstart = (e) => { 
-                    dragEl = el;
-                    dragEl.classList.add('is-dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                };
-                
-                el.ondragover = (e) => {
-                    e.preventDefault();
-                    if (!dragEl || dragEl === el) return;
+            const container = document.getElementById('tabBar');
+            container.innerHTML = state.tabs.map(tab => 
+                `<div class="tab-item ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}">${tab}</div>`
+            ).join('') + `<div class="add-tab-btn" id="addTabBtn">＋</div>`;
+            
+            document.querySelectorAll('.tab-item').forEach(el => {
+                el.addEventListener('click', (e) => {
                     const rect = el.getBoundingClientRect();
-                    const isAfter = (e.clientX - rect.left) > (rect.width / 2);
-                    if (isAfter) {
-                        DOM.tabBar.insertBefore(dragEl, el.nextSibling);
-                    } else {
-                        DOM.tabBar.insertBefore(dragEl, el);
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    if (e.clientX > rect.right - 20) {
+                        e.stopPropagation();
+                        confirmDelete("Tab löschen", `Möchtest du den Tab "${el.dataset.tab}" löschen? (Filme bleiben erhalten)`, () => {
+                            state.tabs = state.tabs.filter(t => t !== el.dataset.tab);
+                            if(state.activeTab === el.dataset.tab) state.activeTab = state.tabs[0] || "";
+                            saveTabs(); renderTabs(); renderMovies();
+                        });
+                        return;
                     }
-                };
-
-                el.ondragend = () => {
-                    if (dragEl) dragEl.classList.remove('is-dragging');
-                    dragEl = null;
-
-                    const tabElements = Array.from(DOM.tabBar.querySelectorAll('.tab-item:not(.add-tab-btn)'));
-                    tabElements.forEach((tabEl, index) => {
-                        const tabId = tabEl.getAttribute('data-id');
-                        if (tabId) {
-                            updateDoc(doc(db, "tabs", tabId), { orderIndex: index });
-                        }
-                    });
-                };
-
-                DOM.tabBar.appendChild(el);
+                    
+                    state.activeTab = el.dataset.tab;
+                    renderTabs();
+                    renderMovies();
+                    
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                });
             });
 
-            const addBtn = document.createElement('div');
-            addBtn.className = 'tab-item add-tab-btn no-select'; addBtn.innerText = '⊕';
-            addBtn.onclick = () => openSimpleModal('Tab', null);
-            DOM.tabBar.appendChild(addBtn);
+            document.getElementById('addTabBtn').addEventListener('click', () => {
+                openSimpleModal("Neuer Tab", 
+                    `<input type="text" class="input-text" id="newTabInput" placeholder="Name (z.B. Anime)">`,
+                    () => {
+                        const val = document.getElementById('newTabInput').value.trim();
+                        if (val && !state.tabs.includes(val)) {
+                            state.tabs.push(val); state.activeTab = val;
+                            saveTabs(); renderTabs(); renderMovies();
+                        }
+                    }
+                );
+                setTimeout(() => document.getElementById('newTabInput').focus(), 100);
+            });
         }
 
-        // Render Movies
+        // --- Movies ---
         function renderMovies() {
-            DOM.movieList.innerHTML = '';
-            const filtered = state.movies.filter(m => m.tabID === state.currentTabId);
+            const container = document.getElementById('movieList');
+            const filtered = state.movies.filter(m => m.tab === state.activeTab);
             
             if (filtered.length === 0) {
-                DOM.movieList.innerHTML = `
-                    <div class="empty-state">
-                        <div style="font-size: 60px; margin-bottom: 20px;">🍿</div>
-                        <h2>Keine Einträge.</h2>
-                        <p>Füge deinen ersten Film hinzu.</p>
-                    </div>`;
+                container.innerHTML = `<div class="empty-state">Keine Einträge unter "${state.activeTab}".<br>Klicke oben auf das ＋ um einen hinzuzufügen.</div>`;
                 return;
             }
 
-            filtered.forEach(movie => {
-                const rated = movie.criteria.filter(c => c.stars > 0);
-                const avg = rated.length ? (rated.reduce((s, c) => s + c.stars, 0) / rated.length).toFixed(1) : '0.0';
+            container.innerHTML = filtered.map(movie => {
+                const totalRating = movie.criteria && movie.criteria.length ? 
+                    (movie.criteria.reduce((sum, c) => sum + c.rating, 0) / movie.criteria.length).toFixed(1) : "0.0";
                 
-                const dateStr = movie.watchedDate 
-                    ? `Gesehen am ${new Date(movie.watchedDate).toLocaleDateString('de-DE')}`
-                    : `Erstellt am ${new Date(movie.dateAdded).toLocaleDateString('de-DE')}`;
-
-                const imgHtml = movie.imageData 
-                    ? `<img src="${movie.imageData}" alt="Poster">` 
-                    : `🎬`;
-
-                const el = document.createElement('div');
-                el.className = 'movie-row no-select'; 
-                el.innerHTML = `
-                    <div class="movie-poster">${imgHtml}</div>
+                const dateStr = movie.watchedDate ? new Date(movie.watchedDate).toLocaleDateString('de-DE') : 'Kein Datum';
+                
+                return `
+                <div class="movie-row" data-id="${movie.id}">
+                    <div class="movie-poster">
+                        ${movie.imageData ? `<img src="${movie.imageData}" alt="Poster">` : '🎬'}
+                    </div>
                     <div class="movie-info">
                         <div class="movie-title">${movie.title}</div>
-                        <div class="movie-rating">${avg} ★</div>
-                        <div class="movie-date">${dateStr}</div>
+                        <div class="movie-rating">★ ${totalRating}</div>
+                        <div class="movie-date">Gesehen: ${dateStr}</div>
                     </div>
+                    <button type="button" class="btn-icon" data-action-id="${movie.id}" style="color: var(--text-secondary);">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
+                    </button>
+                </div>
                 `;
-                
-                setupLongPress(
-                    el,
-                    () => { openMovieEditor(movie); },
-                    () => { 
-                        openDeleteModal(movie.title, () => {
-                            deleteDoc(doc(db, "movies", movie.id));
-                        });
-                    },
-                    () => { openMovieEditor(movie); }
-                );
+            }).join('');
 
-                DOM.movieList.appendChild(el);
+            document.querySelectorAll('.movie-row').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    if(e.target.closest('.btn-icon')) return;
+                    openEditor(row.dataset.id);
+                });
+            });
+
+            document.querySelectorAll('.btn-icon[data-action-id]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    state.contextMenuTarget = btn.dataset.actionId;
+                    openModal('actionMenuModal');
+                });
             });
         }
 
-        // Movie Editor Logic
-        const titleInput = document.getElementById('movieTitleInput');
-        const saveBtn = document.getElementById('saveMovieBtn');
-        const posterInput = document.getElementById('posterInput');
-        const posterPreview = document.getElementById('posterPreview');
-        const dateInput = document.getElementById('watchedDateInput');
-
-        titleInput.addEventListener('input', (e) => { state.movieForm.title = e.target.value; validateMovieForm(); });
-        dateInput.addEventListener('change', (e) => { state.movieForm.watchedDate = e.target.value; });
-        document.getElementById('clearDateBtn').onclick = () => { dateInput.value = ''; state.movieForm.watchedDate = null; };
-
-        document.getElementById('addMovieBtn').onclick = () => openMovieEditor(null);
-        document.getElementById('cancelMovieBtn').onclick = () => { DOM.movieModal.classList.remove('active'); unlockScroll(); };
-        document.getElementById('addCriterionBtn').onclick = () => {
-            // Hier wird das name-Feld nun leer übergeben (""), anstatt "Neues Kriterium" vorzufertigen.
-            state.movieForm.criteria.push({ id: Date.now().toString(), name: "", stars: 0, notes: "" });
-            renderEditorCriteria();
-        };
-
-        posterInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 800;
-                    let w = img.width, h = img.height;
-                    if (w > h && w > MAX_SIZE) { h *= MAX_SIZE/w; w = MAX_SIZE; }
-                    else if (h > MAX_SIZE) { w *= MAX_SIZE/h; h = MAX_SIZE; }
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    
-                    state.movieForm.imageData = canvas.toDataURL('image/jpeg', 0.8);
-                    posterPreview.src = state.movieForm.imageData;
-                    posterPreview.style.display = 'block';
-                    document.getElementById('posterPlaceholder').style.display = 'none';
-                    document.getElementById('removePosterBtn').style.display = 'flex';
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
+        // --- Action Menu (Edit / Delete) ---
+        document.getElementById('actionMenuCancelBtn').addEventListener('click', () => closeModal('actionMenuModal'));
+        document.getElementById('actionMenuEditBtn').addEventListener('click', () => {
+            closeModal('actionMenuModal');
+            openEditor(state.contextMenuTarget);
+        });
+        document.getElementById('actionMenuDeleteBtn').addEventListener('click', () => {
+            closeModal('actionMenuModal');
+            confirmDelete("Film löschen", "Möchtest du diesen Eintrag wirklich endgültig löschen?", async () => {
+                try {
+                    await deleteDoc(doc(db, "movies", state.contextMenuTarget));
+                } catch(e) { console.error("Fehler beim Löschen:", e); }
+            });
         });
 
-        document.getElementById('removePosterBtn').onclick = () => {
-            state.movieForm.imageData = null; posterPreview.src = ''; posterPreview.style.display = 'none';
-            document.getElementById('posterPlaceholder').style.display = 'flex'; document.getElementById('removePosterBtn').style.display = 'none';
-        };
-
-        function openMovieEditor(movie) {
-            lockScroll();
-            state.editingMovieId = movie ? movie.id : null;
-            document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
-            
-            if (movie) {
-                state.movieForm = JSON.parse(JSON.stringify(movie));
-            } else {
-                state.movieForm = {
-                    title: "", imageData: null, watchedDate: new Date().toISOString().split('T')[0],
-                    tabID: state.currentTabId, selectedCategoryId: state.categories[0]?.id,
-                    criteria: state.categories[0] ? state.categories[0].criteriaNames.map(n => ({ id: Math.random().toString(), name: n, stars: 0, notes: "" })) : []
-                };
-            }
-
-            titleInput.value = state.movieForm.title;
-            dateInput.value = state.movieForm.watchedDate || '';
-            
-            if (state.movieForm.imageData) {
-                posterPreview.src = state.movieForm.imageData; posterPreview.style.display = 'block';
-                document.getElementById('posterPlaceholder').style.display = 'none'; document.getElementById('removePosterBtn').style.display = 'flex';
-            } else {
-                posterPreview.src = ''; posterPreview.style.display = 'none';
-                document.getElementById('posterPlaceholder').style.display = 'flex'; document.getElementById('removePosterBtn').style.display = 'none';
-            }
-
-            const delBtn = document.getElementById('deleteMovieBtn');
-            if (movie) {
-                delBtn.style.display = 'block';
-                delBtn.onclick = () => {
-                    openDeleteModal(movie.title, () => {
-                        deleteDoc(doc(db, "movies", movie.id));
-                        DOM.movieModal.classList.remove('active');
-                        unlockScroll();
-                    });
-                };
-            } else { delBtn.style.display = 'none'; }
-
-            renderEditorCategories();
-            renderEditorCriteria();
-            validateMovieForm();
-            DOM.movieModal.classList.add('active');
-        }
-
-        // Render Categories mit Live-Verschiebung im Grid
-        function renderEditorCategories() {
-            const list = document.getElementById('categoryList');
-            list.innerHTML = '';
-            state.categories.forEach((cat) => {
-                const el = document.createElement('div');
-                el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
-                el.innerText = cat.name;
-                el.setAttribute('data-id', cat.id);
-                
-                setupLongPress(
-                    el,
-                    () => { openSimpleModal('EditCategory', cat); }, 
-                    () => { 
-                        openDeleteModal(cat.name, () => {
-                            deleteDoc(doc(db, "categories", cat.id));
-                        });
-                    }, 
-                    () => { 
-                        state.movieForm.selectedCategoryId = cat.id;
-                        let newCriteria = [];
-                        cat.criteriaNames.forEach(name => {
-                            const existing = state.movieForm.criteria.find(c => c.name === name);
-                            newCriteria.push(existing ? existing : { id: Math.random().toString(), name: name, stars: 0, notes: "" });
-                        });
-                        state.movieForm.criteria = newCriteria;
-                        renderEditorCategories();
-                        renderEditorCriteria();
-                    }
-                );
-
-                el.draggable = true;
-                el.ondragstart = (e) => { 
-                    dragEl = el;
-                    dragEl.classList.add('is-dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                };
-                
-                el.ondragover = (e) => {
-                    e.preventDefault();
-                    if (!dragEl || dragEl === el) return;
-                    const rect = el.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    
-                    if (e.clientY < centerY || (e.clientY === centerY && e.clientX < centerX)) {
-                        list.insertBefore(dragEl, el);
-                    } else {
-                        list.insertBefore(dragEl, el.nextSibling);
-                    }
-                };
-
-                el.ondragend = () => {
-                    if (dragEl) dragEl.classList.remove('is-dragging');
-                    dragEl = null;
-
-                    const catElements = Array.from(list.querySelectorAll('.category-pill'));
-                    catElements.forEach((catEl, index) => {
-                        const catId = catEl.getAttribute('data-id');
-                        if (catId) {
-                            updateDoc(doc(db, "categories", catId), { orderIndex: index });
-                        }
-                    });
-                };
-
-                list.appendChild(el);
-            });
-        }
-
-        function renderEditorCriteria() {
-            const container = document.getElementById('criteriaContainer');
-            container.innerHTML = '';
-            state.movieForm.criteria.forEach((crit, index) => {
-                const card = document.createElement('div');
-                card.className = 'criterion-card';
-                let starsHtml = '';
-                for(let i=1; i<=5; i++) starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
-
-                // Hier wurde der placeholder="Neues Kriterium" dem input hinzugefügt
-                card.innerHTML = `
-                    <div class="criterion-header">
-                        <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${crit.name}">
-                        <div class="stars">${starsHtml}</div>
-                        <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
-                    </div>
-                    <textarea class="input-text" placeholder="Notizen...">${crit.notes}</textarea>
-                `;
-
-                card.querySelector('input').oninput = (e) => { state.movieForm.criteria[index].name = e.target.value; };
-                card.querySelectorAll('.star').forEach(s => {
-                    s.onclick = (e) => { state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx')); renderEditorCriteria(); };
-                });
-                card.querySelector('textarea').oninput = (e) => { state.movieForm.criteria[index].notes = e.target.value; };
-                
-                card.querySelector('.btn-icon').onclick = () => { 
-                    const nameToDisplay = state.movieForm.criteria[index].name.trim() !== "" ? state.movieForm.criteria[index].name : "Dieses Kriterium";
-                    openDeleteModal(nameToDisplay, () => {
-                        state.movieForm.criteria.splice(index, 1); 
-                        renderEditorCriteria(); 
-                    });
-                };
-
-                container.appendChild(card);
-            });
-        }
-
-        function validateMovieForm() { saveBtn.disabled = state.movieForm.title.trim().length === 0; }
-
-        saveBtn.onclick = async () => {
-            if (saveBtn.disabled) return;
-            const originalText = saveBtn.innerText; saveBtn.innerText = "Speichert..."; saveBtn.disabled = true;
-
-            const data = {
-                title: state.movieForm.title, imageData: state.movieForm.imageData,
-                criteria: state.movieForm.criteria, watchedDate: state.movieForm.watchedDate,
-                tabID: state.movieForm.tabID, dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
-            };
-
-            if(data.dateAdded === undefined) {
-                delete data.dateAdded;
-            }
-
-            try {
-                if (state.editingMovieId) {
-                    await updateDoc(doc(db, "movies", state.editingMovieId), data);
-                } else { 
-                    await addDoc(collection(db, "movies"), data); 
-                }
-                DOM.movieModal.classList.remove('active');
-                unlockScroll();
-            } catch (error) {
-                console.error(error); alert("Fehler: " + error.message);
-            } finally { saveBtn.innerText = originalText; validateMovieForm(); }
-        };
-
-        // Simple Modals (Tabs / Categories)
-        document.getElementById('newCategoryBtn').onclick = () => openSimpleModal('Category', null);
-        document.getElementById('cancelSimpleModalBtn').onclick = () => { DOM.simpleModal.classList.remove('active'); unlockScroll(); };
+        // --- Editor (Add / Edit) ---
+        document.getElementById('addMovieBtn').addEventListener('click', () => openEditor());
         
-        function openSimpleModal(type, item) {
-            lockScroll(); 
-            const titleEl = document.getElementById('simpleModalTitle');
-            const bodyEl = document.getElementById('simpleModalBody');
-            const saveBtn = document.getElementById('saveSimpleModalBtn');
+        function openEditor(movieId = null) {
+            state.editingMovieId = movieId;
             
-            if (type === 'Tab') {
-                titleEl.innerText = 'Neuer Tab';
-                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
-                saveBtn.onclick = async () => {
-                    const val = document.getElementById('tabNameInput').value.trim();
-                    if(val) {
-                        try {
-                            saveBtn.disabled = true;
-                            await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
-                            DOM.simpleModal.classList.remove('active'); unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
-                    }
-                };
-            } 
-            else if (type === 'EditTab') {
-                titleEl.innerText = 'Tab umbenennen';
-                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${item.name}">`;
-                saveBtn.onclick = async () => {
-                    const val = document.getElementById('tabNameInput').value.trim();
-                    if(val) {
-                        try {
-                            saveBtn.disabled = true;
-                            await updateDoc(doc(db, "tabs", item.id), { name: val });
-                            DOM.simpleModal.classList.remove('active'); unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
-                    }
+            document.getElementById('movieModalTitle').textContent = movieId ? "Eintrag bearbeiten" : "Neuer Eintrag";
+            document.getElementById('deleteMovieBtn').style.display = movieId ? 'block' : 'none';
+            
+            if (movieId) {
+                const movie = state.movies.find(m => m.id === movieId);
+                state.currentMovie = JSON.parse(JSON.stringify(movie));
+            } else {
+                let defaultCat = state.categories[0] || { criteria: getDefaultCriteria() };
+                state.currentMovie = {
+                    title: "", tab: state.activeTab, imageData: null, watchedDate: new Date().toISOString().split('T')[0],
+                    categoryId: defaultCat.id, criteria: JSON.parse(JSON.stringify(defaultCat.criteria))
                 };
             }
-            else if (type === 'Category') {
-                titleEl.innerText = 'Neue Vorlage';
-                buildCategoryEditorBody(bodyEl, "", ["Spannung"]);
-                saveBtn.onclick = async () => saveCategoryData(null, saveBtn);
-            }
-            else if (type === 'EditCategory') {
-                titleEl.innerText = 'Vorlage bearbeiten';
-                buildCategoryEditorBody(bodyEl, item.name, item.criteriaNames);
-                saveBtn.onclick = async () => saveCategoryData(item, saveBtn);
-            }
-            DOM.simpleModal.classList.add('active');
+            
+            renderEditorState();
+            openModal('movieModal');
+            validateSaveBtn();
         }
 
-        // Hilfsfunktionen für den Vorlagen-Editor
-        function buildCategoryEditorBody(container, nameVal, criteriaArr) {
-            container.innerHTML = `
-                <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${nameVal}" style="margin-bottom: 20px;">
-                <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
-                <div id="newCatCriteriaContainer"></div>
-                <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
-            `;
+        function renderEditorState() {
+            document.getElementById('movieTitleInput').value = state.currentMovie.title;
+            document.getElementById('watchedDateInput').value = state.currentMovie.watchedDate || "";
+            
+            const preview = document.getElementById('posterPreview');
+            const placeholder = document.getElementById('posterPlaceholder');
+            const removeBtn = document.getElementById('removePosterBtn');
+            
+            if (state.currentMovie.imageData) {
+                preview.src = state.currentMovie.imageData;
+                preview.style.display = 'block'; placeholder.style.display = 'none';
+                removeBtn.style.display = 'flex';
+            } else {
+                preview.style.display = 'none'; placeholder.style.display = 'flex';
+                removeBtn.style.display = 'none';
+                document.getElementById('posterInput').value = "";
+            }
 
-            const critContainer = document.getElementById('newCatCriteriaContainer');
+            // Categories
+            const catContainer = document.getElementById('categoryList');
+            catContainer.innerHTML = state.categories.map(cat => 
+                `<div class="category-pill ${state.currentMovie.categoryId === cat.id ? 'active' : ''}" data-id="${cat.id}">
+                    ${cat.name}
+                    <span class="delete-cat" style="margin-left: 5px; font-weight: bold; padding: 0 5px;" data-id="${cat.id}">×</span>
+                </div>`
+            ).join('');
+            
+            document.querySelectorAll('.category-pill').forEach(pill => {
+                pill.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('delete-cat')) {
+                        e.stopPropagation();
+                        const catId = e.target.dataset.id;
+                        confirmDelete("Vorlage löschen", "Soll diese Bewertungs-Vorlage gelöscht werden?", () => {
+                            state.categories = state.categories.filter(c => c.id !== catId);
+                            if(state.currentMovie.categoryId === catId) state.currentMovie.categoryId = null;
+                            saveCategories(); renderEditorState();
+                        });
+                        return;
+                    }
+                    
+                    const catId = pill.dataset.id;
+                    const cat = state.categories.find(c => c.id === catId);
+                    if (cat) {
+                        state.currentMovie.categoryId = cat.id;
+                        state.currentMovie.criteria = JSON.parse(JSON.stringify(cat.criteria));
+                        renderEditorState();
+                    }
+                });
+            });
+            
+            renderCriteria();
+        }
 
-            const addCritRow = (val) => {
-                const div = document.createElement('div');
-                div.className = 'flex-row'; div.style.marginBottom = '10px'; div.style.gap = '10px';
-                div.innerHTML = `
-                    <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${val}">
-                    <button type="button" class="btn-icon delete-cat-crit-btn" style="padding: 10px; font-size: 16px;">
-                        ${trashIconSvg}
-                    </button>
-                `;
-                
-                div.querySelector('.delete-cat-crit-btn').onclick = () => {
-                    const inputVal = div.querySelector('.cat-crit-input').value.trim();
-                    const nameToDisplay = inputVal !== "" ? inputVal : "Dieses Kriterium";
-                    openDeleteModal(nameToDisplay, () => {
-                        div.remove();
+        function renderCriteria() {
+            const container = document.getElementById('criteriaContainer');
+            container.innerHTML = state.currentMovie.criteria.map((c, index) => `
+                <div class="criterion-card" data-index="${index}" draggable="true">
+                    <div class="criterion-header">
+                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                            <span class="drag-handle no-select" style="cursor: grab; color: var(--border-color); font-size: 20px;">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+                            </span>
+                            <input type="text" class="input-text" style="flex:1; padding: 5px 10px;" value="${c.name}" onchange="updateCriterion(${index}, 'name', this.value)">
+                            <button type="button" class="btn-icon" onclick="deleteCriterion(${index})">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stars no-select" style="margin-bottom: 10px;">
+                        ${[1,2,3,4,5,6,7,8,9,10].map(star => 
+                            `<span class="star ${c.rating >= star ? 'filled' : ''}" onclick="updateCriterion(${index}, 'rating', ${star})">★</span>`
+                        ).join('')}
+                    </div>
+                    <textarea class="input-text" placeholder="Notizen (optional)..." onchange="updateCriterion(${index}, 'text', this.value)">${c.text}</textarea>
+                </div>
+            `).join('');
+
+            initDragAndDrop();
+        }
+
+        // --- Drag & Drop für Kriterien ---
+        let draggedIndex = null;
+        function initDragAndDrop() {
+            const cards = document.querySelectorAll('.criterion-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('dragstart', function(e) {
+                    draggedIndex = parseInt(this.dataset.index);
+                    this.classList.add('is-dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    // Leeres Image um den standard Ghost zu verstecken (auf Desktop)
+                    const emptyImg = new Image();
+                    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    e.dataTransfer.setDragImage(emptyImg, 0, 0);
+                });
+
+                card.addEventListener('dragend', function() {
+                    this.classList.remove('is-dragging');
+                    document.querySelectorAll('.criterion-card').forEach(c => c.style.borderTop = '');
+                });
+
+                card.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if(this.dataset.index != draggedIndex) {
+                        this.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                card.addEventListener('dragleave', function() {
+                    this.style.borderTop = '';
+                });
+
+                card.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderTop = '';
+                    const dropIndex = parseInt(this.dataset.index);
+                    
+                    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                        const items = Array.from(state.currentMovie.criteria);
+                        const [movedItem] = items.splice(draggedIndex, 1);
+                        items.splice(dropIndex, 0, movedItem);
+                        state.currentMovie.criteria = items;
+                        renderCriteria();
+                    }
+                });
+            });
+        }
+
+
+        // Global functions for criteria updates
+        window.updateCriterion = (index, field, value) => {
+            state.currentMovie.criteria[index][field] = value;
+            if(field === 'rating') renderCriteria();
+        };
+        window.deleteCriterion = (index) => {
+            state.currentMovie.criteria.splice(index, 1);
+            renderCriteria();
+        };
+
+        // Inputs & Listeners
+        document.getElementById('movieTitleInput').addEventListener('input', (e) => {
+            state.currentMovie.title = e.target.value; validateSaveBtn();
+        });
+        document.getElementById('watchedDateInput').addEventListener('change', (e) => {
+            state.currentMovie.watchedDate = e.target.value;
+        });
+        document.getElementById('clearDateBtn').addEventListener('click', () => {
+            state.currentMovie.watchedDate = null;
+            document.getElementById('watchedDateInput').value = "";
+        });
+
+        document.getElementById('addCriterionBtn').addEventListener('click', () => {
+            state.currentMovie.criteria.push({ id: generateId(), name: "Neues Kriterium", rating: 0, text: "" });
+            renderCriteria();
+        });
+
+        // Image Handling
+        document.getElementById('posterInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    resizeImage(event.target.result, 600, (resizedBase64) => {
+                        state.currentMovie.imageData = resizedBase64;
+                        renderEditorState();
                     });
                 };
-                
-                critContainer.appendChild(div);
-            };
-
-            criteriaArr.forEach(c => addCritRow(c));
-
-            document.getElementById('addCatCritBtn').onclick = () => { addCritRow(""); };
-        }
-
-        async function saveCategoryData(existingItem, saveBtn) {
-            const name = document.getElementById('catNameInput').value.trim();
-            const inputs = document.querySelectorAll('.cat-crit-input');
-            const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
-            
-            if(name && criteria.length > 0) {
-                try {
-                    saveBtn.disabled = true;
-                    if (existingItem) {
-                        await updateDoc(doc(db, "categories", existingItem.id), { name: name, criteriaNames: criteria });
-                    } else {
-                        const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
-                        state.movieForm.selectedCategoryId = newCatRef.id;
-                    }
-                    DOM.simpleModal.classList.remove('active');
-                    unlockScroll();
-                } catch (error) { alert("Fehler: " + error.message); } 
-                finally { saveBtn.disabled = false; }
+                reader.readAsDataURL(file);
             }
+        });
+        
+        document.getElementById('removePosterBtn').addEventListener('click', () => {
+            state.currentMovie.imageData = null; renderEditorState();
+        });
+
+        function resizeImage(base64Str, maxWidth, callback) {
+            const img = new Image();
+            img.src = base64Str;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width; let height = img.height;
+                if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.8));
+            };
         }
+
+        // New Category
+        document.getElementById('newCategoryBtn').addEventListener('click', () => {
+            openSimpleModal("Neue Vorlage", 
+                `<input type="text" class="input-text" id="newCatName" placeholder="Name der Vorlage">`,
+                () => {
+                    const name = document.getElementById('newCatName').value.trim();
+                    if (name) {
+                        const newCat = { id: generateId(), name, criteria: JSON.parse(JSON.stringify(state.currentMovie.criteria)) };
+                        state.categories.push(newCat);
+                        state.currentMovie.categoryId = newCat.id;
+                        saveCategories(); renderEditorState();
+                    }
+                }
+            );
+            setTimeout(() => document.getElementById('newCatName').focus(), 100);
+        });
+
+        const validateSaveBtn = () => {
+            document.getElementById('saveMovieBtn').disabled = state.currentMovie.title.trim() === "";
+        };
+
+        // Save & Cancel Movie
+        document.getElementById('cancelMovieBtn').addEventListener('click', () => closeModal('movieModal'));
+        
+        document.getElementById('saveMovieBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('saveMovieBtn');
+            btn.disabled = true; btn.textContent = "Lädt...";
+            try {
+                const movieData = { ...state.currentMovie, dateAdded: state.currentMovie.dateAdded || new Date().toISOString() };
+                if (state.editingMovieId) {
+                    await updateDoc(doc(db, "movies", state.editingMovieId), movieData);
+                } else {
+                    await addDoc(collection(db, "movies"), movieData);
+                }
+                closeModal('movieModal');
+            } catch (error) {
+                console.error("Fehler beim Speichern: ", error);
+                alert("Fehler beim Speichern. Bitte prüfen ob du online bist.");
+            } finally {
+                btn.textContent = "Speichern"; btn.disabled = false;
+            }
+        });
+
+        document.getElementById('deleteMovieBtn').addEventListener('click', () => {
+            confirmDelete("Film löschen", "Soll dieser Eintrag endgültig gelöscht werden?", async () => {
+                try {
+                    await deleteDoc(doc(db, "movies", state.editingMovieId));
+                    closeModal('movieModal');
+                } catch(e) { console.error("Löschen fehlgeschlagen:", e); }
+            });
+        });
+
+        // --- Simple Modal (Reusable for Prompts) ---
+        let simpleModalCallback = null;
+        function openSimpleModal(title, htmlBody, onSave) {
+            document.getElementById('simpleModalTitle').textContent = title;
+            document.getElementById('simpleModalBody').innerHTML = htmlBody;
+            simpleModalCallback = onSave;
+            openModal('simpleModal');
+        }
+        document.getElementById('cancelSimpleModalBtn').addEventListener('click', () => closeModal('simpleModal'));
+        document.getElementById('saveSimpleModalBtn').addEventListener('click', () => {
+            if (simpleModalCallback) simpleModalCallback();
+            closeModal('simpleModal');
+        });
+
+        // --- Custom Delete Dialog ---
+        let deleteConfirmCallback = null;
+        function confirmDelete(title, message, onConfirm) {
+            document.getElementById('deleteModalTitle').textContent = title;
+            document.getElementById('deleteModalMessage').textContent = message;
+            deleteConfirmCallback = onConfirm;
+            openModal('customDeleteModal');
+        }
+        document.getElementById('deleteModalCancel').addEventListener('click', () => closeModal('customDeleteModal'));
+        document.getElementById('deleteModalConfirm').addEventListener('click', () => {
+            if(deleteConfirmCallback) deleteConfirmCallback();
+            closeModal('customDeleteModal');
+        });
+
     </script>
 </body>
 </html>
