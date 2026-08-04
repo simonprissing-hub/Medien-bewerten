@@ -6,7 +6,6 @@
     <title>Mein Filmtagebuch</title>
     <style>
         :root {
-            /* System Colors (Light) */
             --bg-color: #f2f2f7;
             --surface-color: #ffffff;
             --surface-secondary: #e5e5ea;
@@ -16,8 +15,7 @@
             --danger-color: #ff3b30;
             --border-color: #d1d1d6;
             --star-color: #ff9500;
-            
-            /* Modal / Elevation System */
+
             --modal-overlay-bg: rgba(0, 0, 0, 0.55);
             --modal-shadow: 0 20px 40px rgba(0, 0, 0, 0.22), 0 2px 10px rgba(0, 0, 0, 0.1);
             --modal-border: rgba(0, 0, 0, 0.12);
@@ -25,15 +23,13 @@
         }
 
         [data-theme="dark"] {
-            /* System Colors (Dark) */
             --bg-color: #000000;
             --surface-color: #1c1c1e;
             --surface-secondary: #2c2c2e;
             --text-primary: #ffffff;
             --text-secondary: #98989f;
             --border-color: #38383a;
-            
-            /* Modal / Elevation System (Dark) */
+
             --modal-overlay-bg: rgba(0, 0, 0, 0.75);
             --modal-shadow: 0 25px 50px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2);
             --modal-border: rgba(255, 255, 255, 0.15);
@@ -41,7 +37,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
+
         body {
             margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -50,7 +46,6 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* SVG Icon Helpers */
         .icon {
             width: 1em;
             height: 1em;
@@ -64,19 +59,16 @@
             fill: currentColor;
         }
 
-        /* Buttons & Interaktionen beschleunigen */
         button, .btn-text, .btn-primary, .btn-icon {
             touch-action: manipulation;
         }
 
-        /* Blockierung von nativer Text-Selektion, ABER Drag erlauben! */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
         }
 
-        /* Visueller Zustand beim Ziehen (Platzhalter-Effekt) */
         .is-dragging {
             opacity: 0.4;
             background-color: var(--border-color) !important;
@@ -84,8 +76,8 @@
             box-shadow: none !important;
         }
 
-        /* Typography & Layout */
         h1, h2, h3, p { margin: 0; }
+
         .header {
             display: flex; justify-content: space-between; align-items: center;
             padding: 15px 20px; background-color: var(--surface-color);
@@ -98,14 +90,13 @@
             font-size: 24px; cursor: pointer; margin-left: 15px;
         }
 
-        /* Tabs */
         .tab-bar {
             display: flex; gap: 20px; overflow-x: auto;
             padding: 15px 20px; background-color: var(--surface-color);
             scrollbar-width: none;
         }
         .tab-bar::-webkit-scrollbar { display: none; }
-        
+
         .tab-item {
             cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
             font-weight: 500; color: var(--text-primary); white-space: nowrap;
@@ -118,7 +109,6 @@
         }
         .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; padding: 5px; }
 
-        /* BUTTON (INLINE) - VERKLEINERT */
         .action-bar-inline {
             padding: 12px 20px 0 20px;
             display: flex;
@@ -137,12 +127,8 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: background-color 0.2s, transform 0.1s;
         }
+        .add-btn-inline:active { transform: scale(0.98); }
 
-        .add-btn-inline:active {
-            transform: scale(0.98);
-        }
-
-        /* Movie List */
         .movie-list { padding: 15px 20px 20px 20px; display: grid; gap: 15px; }
         .movie-row {
             display: flex; gap: 15px; padding: 10px; border-radius: 12px;
@@ -163,7 +149,6 @@
         .movie-date { font-size: 12px; color: var(--text-secondary); }
         .empty-state { text-align: center; padding: 50px 20px; color: var(--text-secondary); }
 
-        /* --- VEREINHEITLICHES MODAL & DIALOG SYSTEM --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--modal-overlay-bg);
@@ -185,7 +170,6 @@
             border: 1px solid var(--modal-border);
         }
 
-        /* Kompakte, zentrierte Dialogfenster (z.B. Neue Vorlage, Delete, Menu) */
         .modal-dialog-sm {
             height: auto !important;
             max-width: 420px !important;
@@ -204,10 +188,10 @@
             .editor-left { width: 300px; flex-shrink: 0; }
             .editor-right { flex: 1; }
         }
-        
+
         .modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 20px; background-color: var(--surface-color); 
+            padding: 16px 20px; background-color: var(--surface-color);
             border-bottom: 1px solid var(--border-color);
         }
         .btn-text { background: none; border: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
@@ -217,17 +201,14 @@
 
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
 
-        /* Form Inputs */
         .form-group { margin-bottom: 20px; }
         .input-text {
-            width: 100%; padding: 12px 15px; border-radius: 10px; 
+            width: 100%; padding: 12px 15px; border-radius: 10px;
             border: 1px solid var(--border-color);
             background-color: var(--input-bg); color: var(--text-primary);
             font-size: 16px; outline: none; transition: border-color 0.2s;
         }
-        .input-text:focus {
-            border-color: var(--accent-color);
-        }
+        .input-text:focus { border-color: var(--accent-color); }
 
         input[type="date"], select.input-text {
             box-sizing: border-box;
@@ -237,8 +218,8 @@
             position: relative;
         }
         input[type="date"]::-webkit-calendar-picker-indicator {
-            background: transparent; bottom: 0; color: transparent; 
-            cursor: pointer; height: auto; left: 0; position: absolute; 
+            background: transparent; bottom: 0; color: transparent;
+            cursor: pointer; height: auto; left: 0; position: absolute;
             right: 0; top: 0; width: auto;
         }
 
@@ -251,50 +232,133 @@
         }
         .poster-picker img { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
         .poster-picker input[type="file"] { display: none; }
-        
+
         .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
-        
-        /* Category Pills */
-        .category-scroll { 
-            display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 5px; 
+
+        .category-scroll {
+            display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 5px;
         }
-        
+
         .category-pill {
             padding: 8px 16px; border-radius: 20px; background-color: var(--input-bg);
             border: 1px solid var(--border-color);
             color: var(--text-primary); white-space: nowrap; cursor: pointer; font-size: 14px;
         }
         .category-pill.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
-        
-        /* Criteria */
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 32px;
+            flex-shrink: 0;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: var(--border-color);
+            transition: 0.2s;
+            border-radius: 999px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 3px;
+            top: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+        }
+        .switch input:checked + .slider { background-color: var(--accent-color); }
+        .switch input:checked + .slider:before { transform: translateX(20px); }
+
+        .season-tab-bar {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 0 6px 0;
+            scrollbar-width: none;
+            touch-action: pan-y;
+        }
+        .season-tab-bar::-webkit-scrollbar { display: none; }
+
+        .season-tab-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .season-tab-item.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        .season-tab-button,
+        .season-tab-delete {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            font-weight: 600;
+        }
+        .season-tab-button { font-size: 14px; }
+        .season-tab-delete { opacity: 0.85; }
+        .season-tab-delete svg { width: 14px; height: 14px; }
+
         .criterion-card {
             background-color: var(--input-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;
             border: 1px solid var(--border-color);
         }
-        .criterion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .criterion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
         .stars { display: flex; gap: 5px; font-size: 20px; color: var(--border-color); cursor: pointer; }
         .star.filled { color: var(--star-color); }
-        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;}
+        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
         textarea.input-text { resize: vertical; min-height: 60px; font-size: 14px; }
 
-        /* Small utilities */
         .flex-row { display: flex; justify-content: space-between; align-items: center; }
-        .btn-primary { 
-            display: block; width: 100%; padding: 12px; border-radius: 10px; 
-            background: var(--accent-color); color: white; border: none; 
+        .btn-primary {
+            display: block; width: 100%; padding: 12px; border-radius: 10px;
+            background: var(--accent-color); color: white; border: none;
             font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; margin-top: 10px;
         }
 
-        /* Aktions-Menü Buttons */
         .action-menu-btn {
-            display: flex; width: 100%; padding: 14px; border-radius: 10px; 
-            background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color); 
+            display: flex; width: 100%; padding: 14px; border-radius: 10px;
+            background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);
             font-size: 17px; cursor: pointer; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px;
             font-weight: 500;
         }
         .action-menu-btn.danger { color: var(--danger-color); }
 
-        /* --- STYLES FÜR EINTRÄGE IM EINSTELLUNGS-MENÜ --- */
         .settings-section-title {
             font-size: 12px;
             font-weight: 600;
@@ -317,16 +381,12 @@
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
         }
-        .settings-row:last-child {
-            border-bottom: none;
-        }
+        .settings-row:last-child { border-bottom: none; }
         .settings-row-interactive {
             cursor: pointer;
             transition: background-color 0.15s;
         }
-        .settings-row-interactive:active {
-            background-color: var(--surface-secondary);
-        }
+        .settings-row-interactive:active { background-color: var(--surface-secondary); }
         .settings-label {
             font-size: 15px;
             font-weight: 500;
@@ -341,38 +401,29 @@
         }
     </style>
 
-    <!-- Polyfill: Macht natives Drag&Drop auf Touch-Geräten möglich! -->
     <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
 </head>
 <body>
 
-    <!-- Main View -->
     <div class="header">
         <h1>Mein Filmtagebuch</h1>
         <div class="header-actions">
-            <!-- Drei-Punkte-Menü Button -->
             <button type="button" id="mainMenuBtn" aria-label="Einstellungen">
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style="font-size: 22px;">
-                    <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                    <path d="M9.5 13a1.5 1.5 0 1 1-3 0zm0-5a1.5 1.5 0 1 1-3 0zm0-5a1.5 1.5 0 1 1-3 0z"/>
                 </svg>
             </button>
         </div>
     </div>
 
-    <div class="tab-bar" id="tabBar">
-        <!-- Tabs injected by JS -->
-    </div>
+    <div class="tab-bar" id="tabBar"></div>
 
-    <!-- Neuer Inline-Button zum Hinzufügen (dezent verkleinert) -->
     <div class="action-bar-inline">
         <button type="button" class="add-btn-inline" id="addMovieBtnInline">＋ Neuen Eintrag hinzufügen</button>
     </div>
 
-    <div class="movie-list" id="movieList">
-        <!-- Movies injected by JS -->
-    </div>
+    <div class="movie-list" id="movieList"></div>
 
-    <!-- Settings Modal (Drei-Punkte-Menü) -->
     <div class="modal-overlay" id="settingsModal" style="z-index: 1800;">
         <div class="modal-content modal-dialog-sm">
             <div class="modal-header">
@@ -381,8 +432,6 @@
                 <div style="width: 50px;"></div>
             </div>
             <div class="modal-body" style="padding: 20px 16px;">
-                
-                <!-- Kategorie 1: Erscheinungsbild -->
                 <div class="settings-section-title">Erscheinungsbild</div>
                 <div class="settings-group">
                     <div class="settings-row settings-row-interactive" id="toggleThemeMenuBtn">
@@ -391,7 +440,6 @@
                     </div>
                 </div>
 
-                <!-- Kategorie 2: Speicherplatz -->
                 <div class="settings-section-title">Speicherplatz</div>
                 <div class="settings-group">
                     <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
@@ -406,12 +454,10 @@
                         </select>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- Movie Editor Modal -->
     <div class="modal-overlay" id="movieModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -421,7 +467,6 @@
             </div>
             <div class="modal-body">
                 <div class="editor-layout">
-                    <!-- Left Column -->
                     <div class="editor-left">
                         <label class="poster-picker" id="posterPicker">
                             <span id="posterPlaceholder" style="display: flex; flex-direction: column; align-items: center;">
@@ -437,11 +482,11 @@
                         </label>
                         <div class="flex-row" style="margin-bottom: 15px;">
                             <button type="button" class="btn-text btn-cancel" id="removePosterBtn" style="display:none; font-size:14px; width: 100%; justify-content: center;">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg> 
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                                 Bild entfernen
                             </button>
                         </div>
-                        
+
                         <div class="form-group" style="background: var(--input-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px;">
                             <div class="flex-row">
                                 <strong>Gesehen am:</strong>
@@ -452,25 +497,44 @@
                             <input type="date" class="input-text" id="watchedDateInput" style="margin-top: 10px;">
                         </div>
                     </div>
-                    
-                    <!-- Right Column -->
+
                     <div class="editor-right">
                         <input type="text" class="input-text" id="movieTitleInput" placeholder="Titel des Films / der Serie" style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">
-                        
+
                         <div class="flex-row">
                             <div class="section-title" style="margin-top:0;">Kategorie (Preset)</div>
                             <button type="button" class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Vorlage</button>
                         </div>
-                        <div class="category-scroll" id="categoryList">
-                            <!-- Categories injected by JS -->
+                        <div class="category-scroll" id="categoryList"></div>
+
+                        <div id="seasonModeSection" style="display:none; margin-top: 18px;">
+                            <div class="section-title" style="margin-top:0;">Staffelbewertung</div>
+                            <div class="toggle-row">
+                                <div>
+                                    <div style="font-weight:600;">Pro Staffel bewerten</div>
+                                    <div style="font-size:13px; color: var(--text-secondary);">Jede Staffel erhält ihre eigene Bewertung.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="seasonModeToggle" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div id="seasonControls" style="display:none; margin-top: 14px;">
+                                <div class="flex-row" style="margin-bottom: 8px;">
+                                    <div class="section-title" style="margin-top:0; margin-bottom:0;">Staffeln</div>
+                                    <button type="button" class="btn-text btn-save" id="addSeasonBtn" style="font-size:14px;">+ Staffel hinzufügen</button>
+                                </div>
+                                <div class="season-tab-bar" id="seasonTabBar"></div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Horizontal wischen, um zwischen Staffeln zu wechseln.</div>
+                            </div>
                         </div>
 
                         <div class="section-title" style="margin-top: 30px;">Bewertungskriterien</div>
-                        <div id="criteriaContainer">
-                            <!-- Criteria injected by JS -->
-                        </div>
+                        <div id="activeSeasonLabel" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;"></div>
+                        <div id="criteriaContainer"></div>
                         <button type="button" class="btn-text btn-save" id="addCriterionBtn" style="margin-top: 15px;">+ Weiteres Kriterium hinzufügen</button>
-                        
+
                         <button type="button" class="btn-primary" id="deleteMovieBtn" style="background: var(--danger-color); margin-top: 40px; display: none;">Film löschen</button>
                     </div>
                 </div>
@@ -478,7 +542,6 @@
         </div>
     </div>
 
-    <!-- Small Modal (Tabs / Vorlagen / Categories) -->
     <div class="modal-overlay" id="simpleModal" style="z-index: 1800;">
         <div class="modal-content modal-dialog-sm">
             <div class="modal-header">
@@ -486,13 +549,10 @@
                 <h3 id="simpleModalTitle">Titel</h3>
                 <button type="button" class="btn-text btn-save" id="saveSimpleModalBtn">Speichern</button>
             </div>
-            <div class="modal-body" id="simpleModalBody">
-                <!-- Injected via JS -->
-            </div>
+            <div class="modal-body" id="simpleModalBody"></div>
         </div>
     </div>
 
-    <!-- Kontextmenü (Bearbeiten / Löschen) -->
     <div class="modal-overlay" id="actionMenuModal" style="z-index: 1900;">
         <div class="modal-content modal-dialog-sm" style="padding: 20px;">
             <button type="button" class="action-menu-btn" id="actionMenuEditBtn">
@@ -507,7 +567,6 @@
         </div>
     </div>
 
-    <!-- Custom Delete Modal -->
     <div class="modal-overlay" id="customDeleteModal" style="z-index: 2000;">
         <div class="modal-content modal-dialog-sm">
             <div class="modal-body" style="text-align: center; padding: 25px 20px;">
@@ -516,7 +575,7 @@
                         <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                     </svg>
                 </div>
-                <h3 style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
+                <h3 id="deleteModalTitle" style="margin-bottom: 10px; font-size: 20px;">Wirklich löschen?</h3>
                 <p id="deleteModalText" style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px; word-break: break-word;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" class="btn-primary" id="deleteModalCancel" style="background: var(--border-color); color: var(--text-primary); margin-top: 0; flex: 1;">Abbrechen</button>
@@ -526,7 +585,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="importmap">
       {
         "imports": {
@@ -552,26 +610,122 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        function uid() {
+            return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function clone(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        function getTabById(tabId) {
+            return state.tabs.find(t => t.id === tabId) || null;
+        }
+
+        function isSeriesTab(tabId = state.currentTabId) {
+            const tab = getTabById(tabId);
+            return !!tab && (tab.kind === "series" || tab.name === "Serien");
+        }
+
+        function getSelectedCategory() {
+            return state.categories.find(c => c.id === state.movieForm.selectedCategoryId) || state.categories[0] || null;
+        }
+
+        function getTemplateCriteriaNames(categoryId = state.movieForm.selectedCategoryId) {
+            const cat = state.categories.find(c => c.id === categoryId) || state.categories[0] || null;
+            return Array.isArray(cat?.criteriaNames) ? cat.criteriaNames : [];
+        }
+
+        function makeCriteria(templateNames, existingCriteria = []) {
+            return (templateNames || []).map(name => {
+                const found = existingCriteria.find(c => c.name === name);
+                return {
+                    id: found?.id || uid(),
+                    name,
+                    stars: Number(found?.stars || 0),
+                    notes: found?.notes || ""
+                };
+            });
+        }
+
+        function createSeason(categoryId, existingCriteria = []) {
+            return {
+                id: uid(),
+                criteria: makeCriteria(getTemplateCriteriaNames(categoryId), existingCriteria)
+            };
+        }
+
+        function calculateCriteriaAverage(criteria = []) {
+            const rated = (criteria || []).filter(c => Number(c.stars || 0) > 0);
+            if (rated.length === 0) return 0;
+            return rated.reduce((sum, c) => sum + Number(c.stars || 0), 0) / rated.length;
+        }
+
+        function calculateMovieAverage(movie) {
+            const seasons = Array.isArray(movie.seasons) ? movie.seasons : [];
+            if (seasons.length > 0) {
+                const seasonAverages = seasons
+                    .map(season => calculateCriteriaAverage(season.criteria || []))
+                    .filter(avg => avg > 0);
+
+                if (seasonAverages.length === 0) return "0.0";
+                const total = seasonAverages.reduce((sum, val) => sum + val, 0) / seasonAverages.length;
+                return total.toFixed(1);
+            }
+
+            return calculateCriteriaAverage(movie.criteria || []).toFixed(1);
+        }
+
         let state = {
-            tabs: [], categories: [], movies: [],
-            currentTabId: null, editingMovieId: null,
-            movieForm: { title: "", imageData: null, watchedDate: null, tabID: null, selectedCategoryId: null, criteria: [] }
+            tabs: [],
+            categories: [],
+            movies: [],
+            currentTabId: null,
+            editingMovieId: null,
+            movieForm: {
+                title: "",
+                imageData: null,
+                watchedDate: null,
+                tabID: null,
+                selectedCategoryId: null,
+                criteria: [],
+                seasonMode: false,
+                seasons: [],
+                activeSeasonIndex: 0
+            }
         };
 
         const trashIconSvg = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
 
-        // --- Drag & Drop Live-Referenz ---
         let dragEl = null;
 
         const DOM = {
-            tabBar: document.getElementById('tabBar'), movieList: document.getElementById('movieList'),
-            mainMenuBtn: document.getElementById('mainMenuBtn'), settingsModal: document.getElementById('settingsModal'),
-            closeSettingsBtn: document.getElementById('closeSettingsModalBtn'), toggleThemeBtn: document.getElementById('toggleThemeMenuBtn'),
-            autoDeleteSelect: document.getElementById('autoDeleteSelect'), movieModal: document.getElementById('movieModal'),
-            simpleModal: document.getElementById('simpleModal')
+            tabBar: document.getElementById('tabBar'),
+            movieList: document.getElementById('movieList'),
+            mainMenuBtn: document.getElementById('mainMenuBtn'),
+            settingsModal: document.getElementById('settingsModal'),
+            closeSettingsBtn: document.getElementById('closeSettingsModalBtn'),
+            toggleThemeBtn: document.getElementById('toggleThemeMenuBtn'),
+            autoDeleteSelect: document.getElementById('autoDeleteSelect'),
+            movieModal: document.getElementById('movieModal'),
+            simpleModal: document.getElementById('simpleModal'),
+            seasonModeSection: document.getElementById('seasonModeSection'),
+            seasonModeToggle: document.getElementById('seasonModeToggle'),
+            seasonControls: document.getElementById('seasonControls'),
+            seasonTabBar: document.getElementById('seasonTabBar'),
+            addSeasonBtn: document.getElementById('addSeasonBtn'),
+            activeSeasonLabel: document.getElementById('activeSeasonLabel')
         };
 
-        // Theme & Einstellungen initialisieren
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
 
@@ -600,19 +754,21 @@
             runAutoDeleteCleanup(state.movies);
         };
 
-        function lockScroll() { document.body.style.overflow = 'hidden'; }
-        function unlockScroll() { 
+        function lockScroll() {
+            document.body.style.overflow = 'hidden';
+        }
+
+        function unlockScroll() {
             if (document.querySelectorAll('.modal-overlay.active').length === 0) {
-                document.body.style.overflow = ''; 
+                document.body.style.overflow = '';
             }
         }
 
-        // Speicher-Ersparnis-Logik: Löscht nur das Bild älterer Einträge aus Firestore
         async function runAutoDeleteCleanup(movies) {
             const setting = localStorage.getItem('autoDeleteSetting') || '6';
             if (setting === 'never' || !movies || movies.length === 0) return;
 
-            const months = parseInt(setting);
+            const months = parseInt(setting, 10);
             if (isNaN(months)) return;
 
             const cutoffDate = new Date();
@@ -636,33 +792,47 @@
             }
         }
 
-        // --- Custom Delete Modal Logik mit Objektnamen ---
         let activeDeleteAction = null;
         const deleteModal = document.getElementById('customDeleteModal');
+        const deleteModalTitle = document.getElementById('deleteModalTitle');
         const deleteModalText = document.getElementById('deleteModalText');
+        const deleteModalConfirm = document.getElementById('deleteModalConfirm');
+
         deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-        
-        function openDeleteModal(objectName, onConfirmCallback) {
-            activeDeleteAction = onConfirmCallback;
-            deleteModalText.innerHTML = `Möchtest du <b>"${objectName}"</b> wirklich unwiderruflich löschen?`;
+
+        function openConfirmModal({ title, message, confirmText = 'Löschen', onConfirm }) {
+            activeDeleteAction = onConfirm;
+            deleteModalTitle.textContent = title;
+            deleteModalText.innerHTML = message;
+            deleteModalConfirm.textContent = confirmText;
+            deleteModalConfirm.style.background = 'var(--danger-color)';
+            deleteModalConfirm.style.color = 'white';
             deleteModal.classList.add('active');
             lockScroll();
         }
-        
+
+        function openDeleteModal(objectName, onConfirmCallback) {
+            openConfirmModal({
+                title: 'Wirklich löschen?',
+                message: `Möchtest du <b>"${escapeHtml(objectName)}"</b> wirklich unwiderruflich löschen?`,
+                confirmText: 'Löschen',
+                onConfirm: onConfirmCallback
+            });
+        }
+
         document.getElementById('deleteModalCancel').onclick = () => {
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
             unlockScroll();
         };
-        
-        document.getElementById('deleteModalConfirm').onclick = () => {
+
+        deleteModalConfirm.onclick = () => {
             if (activeDeleteAction) activeDeleteAction();
             deleteModal.classList.remove('active');
             activeDeleteAction = null;
             unlockScroll();
         };
 
-        // --- Aktions-Menü Logik (Bearbeiten/Löschen) ---
         let activeEditCallback = null;
         let activeDeleteCallback = null;
         const actionMenuModal = document.getElementById('actionMenuModal');
@@ -690,27 +860,33 @@
             unlockScroll();
         };
 
-        // --- LONG PRESS LOGIK ---
         function setupLongPress(element, onEdit, onDelete, onClick) {
             let pressTimer = null;
             let longPressTriggered = false;
             let startX = 0, startY = 0;
 
-            const clearTimer = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+            const clearTimer = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
 
             const onStart = (e) => {
-                if (document.getElementById('actionMenuModal').classList.contains('active') ||
+                if (
+                    document.getElementById('actionMenuModal').classList.contains('active') ||
                     document.getElementById('customDeleteModal').classList.contains('active') ||
                     document.getElementById('simpleModal').classList.contains('active') ||
-                    document.getElementById('settingsModal').classList.contains('active')) {
+                    document.getElementById('settingsModal').classList.contains('active')
+                ) {
                     return;
                 }
-                
-                clearTimer(); 
+
+                clearTimer();
                 longPressTriggered = false;
-                
+
                 const touch = e.touches ? e.touches[0] : e;
-                startX = touch.clientX || 0; 
+                startX = touch.clientX || 0;
                 startY = touch.clientY || 0;
 
                 pressTimer = setTimeout(() => {
@@ -725,7 +901,7 @@
                 const touch = e.touches ? e.touches[0] : e;
                 const currentX = touch.clientX || 0;
                 const currentY = touch.clientY || 0;
-                
+
                 if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) {
                     clearTimer();
                 }
@@ -743,41 +919,52 @@
             element.addEventListener('mouseup', onEnd);
             element.addEventListener('mouseleave', onEnd);
 
-            element.addEventListener('dragstart', () => { clearTimer(); longPressTriggered = false; });
+            element.addEventListener('dragstart', () => {
+                clearTimer();
+                longPressTriggered = false;
+            });
             element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
             if (onClick) {
                 element.addEventListener('click', (e) => {
                     if (longPressTriggered) {
-                        e.preventDefault(); e.stopPropagation(); return false;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
                     }
                     onClick(e);
                 });
             }
         }
 
-        // Firebase Sync
-        onSnapshot(query(collection(db, "tabs"), orderBy("orderIndex")), 
+        onSnapshot(
+            query(collection(db, "tabs"), orderBy("orderIndex")),
             (snapshot) => {
-                state.tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                state.tabs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 if (state.tabs.length === 0) setupDefaults();
                 if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
-                renderTabs(); renderMovies();
+                renderTabs();
+                renderMovies();
             },
             (error) => { console.error(error); }
         );
 
-        onSnapshot(query(collection(db, "categories"), orderBy("orderIndex")), 
+        onSnapshot(
+            query(collection(db, "categories"), orderBy("orderIndex")),
             (snapshot) => {
-                state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.movieForm.tabID) renderEditorCategories();
+                state.categories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (state.movieForm.tabID) {
+                    renderEditorCategories();
+                    if (state.movieForm.seasonMode) renderSeasonTabs();
+                }
             },
             (error) => { console.error(error); }
         );
 
-        onSnapshot(query(collection(db, "movies"), orderBy("dateAdded", "desc")), 
+        onSnapshot(
+            query(collection(db, "movies"), orderBy("dateAdded", "desc")),
             (snapshot) => {
-                state.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                state.movies = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderMovies();
                 runAutoDeleteCleanup(state.movies);
             },
@@ -787,39 +974,47 @@
         async function setupDefaults() {
             try {
                 await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
-                await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1 });
-                await addDoc(collection(db, "categories"), { name: "Standard", criteriaNames: ["Spannung", "Story", "Effekte"], orderIndex: 0 });
+                await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1, kind: "series" });
+                await addDoc(collection(db, "categories"), {
+                    name: "Standard",
+                    criteriaNames: ["Spannung", "Story", "Effekte"],
+                    orderIndex: 0
+                });
             } catch (e) {}
         }
 
-        // Render Tabs mit Live-Verschiebung
         function renderTabs() {
             DOM.tabBar.innerHTML = '';
+
             state.tabs.forEach((tab) => {
                 const el = document.createElement('div');
                 el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
                 el.innerText = tab.name;
                 el.setAttribute('data-id', tab.id);
-                
+
                 setupLongPress(
-                    el, 
-                    () => { openSimpleModal('EditTab', tab); }, 
-                    () => { 
+                    el,
+                    () => { openSimpleModal('EditTab', tab); },
+                    () => {
                         openDeleteModal(tab.name, () => {
                             deleteDoc(doc(db, "tabs", tab.id));
                             if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
                         });
                     },
-                    () => { state.currentTabId = tab.id; renderTabs(); renderMovies(); } 
+                    () => {
+                        state.currentTabId = tab.id;
+                        renderTabs();
+                        renderMovies();
+                    }
                 );
 
                 el.draggable = true;
-                el.ondragstart = (e) => { 
+                el.ondragstart = (e) => {
                     dragEl = el;
                     dragEl.classList.add('is-dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                
+
                 el.ondragover = (e) => {
                     e.preventDefault();
                     if (!dragEl || dragEl === el) return;
@@ -849,16 +1044,16 @@
             });
 
             const addBtn = document.createElement('div');
-            addBtn.className = 'tab-item add-tab-btn no-select'; addBtn.innerText = '⊕';
+            addBtn.className = 'tab-item add-tab-btn no-select';
+            addBtn.innerText = '⊕';
             addBtn.onclick = () => openSimpleModal('Tab', null);
             DOM.tabBar.appendChild(addBtn);
         }
 
-        // Render Movies
         function renderMovies() {
             DOM.movieList.innerHTML = '';
             const filtered = state.movies.filter(m => m.tabID === state.currentTabId);
-            
+
             if (filtered.length === 0) {
                 DOM.movieList.innerHTML = `
                     <div class="empty-state">
@@ -870,32 +1065,31 @@
             }
 
             filtered.forEach(movie => {
-                const rated = movie.criteria.filter(c => c.stars > 0);
-                const avg = rated.length ? (rated.reduce((s, c) => s + c.stars, 0) / rated.length).toFixed(1) : '0.0';
-                
-                const dateStr = movie.watchedDate 
+                const avg = calculateMovieAverage(movie);
+
+                const dateStr = movie.watchedDate
                     ? `Gesehen am ${new Date(movie.watchedDate).toLocaleDateString('de-DE')}`
                     : `Erstellt am ${new Date(movie.dateAdded).toLocaleDateString('de-DE')}`;
 
-                const imgHtml = movie.imageData 
-                    ? `<img src="${movie.imageData}" alt="Poster">` 
+                const imgHtml = movie.imageData
+                    ? `<img src="${movie.imageData}" alt="Poster">`
                     : `🎬`;
 
                 const el = document.createElement('div');
-                el.className = 'movie-row no-select'; 
+                el.className = 'movie-row no-select';
                 el.innerHTML = `
                     <div class="movie-poster">${imgHtml}</div>
                     <div class="movie-info">
-                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-title">${escapeHtml(movie.title)}</div>
                         <div class="movie-rating">${avg} ★</div>
-                        <div class="movie-date">${dateStr}</div>
+                        <div class="movie-date">${escapeHtml(dateStr)}</div>
                     </div>
                 `;
-                
+
                 setupLongPress(
                     el,
                     () => { openMovieEditor(movie); },
-                    () => { 
+                    () => {
                         openDeleteModal(movie.title, () => {
                             deleteDoc(doc(db, "movies", movie.id));
                         });
@@ -907,28 +1101,43 @@
             });
         }
 
-        // Movie Editor Logic
         const titleInput = document.getElementById('movieTitleInput');
         const saveBtn = document.getElementById('saveMovieBtn');
         const posterInput = document.getElementById('posterInput');
         const posterPreview = document.getElementById('posterPreview');
         const dateInput = document.getElementById('watchedDateInput');
+        const activeSeasonLabel = document.getElementById('activeSeasonLabel');
 
-        titleInput.addEventListener('input', (e) => { state.movieForm.title = e.target.value; validateMovieForm(); });
-        dateInput.addEventListener('change', (e) => { state.movieForm.watchedDate = e.target.value; });
-        document.getElementById('clearDateBtn').onclick = () => { dateInput.value = ''; state.movieForm.watchedDate = null; };
+        titleInput.addEventListener('input', (e) => {
+            state.movieForm.title = e.target.value;
+            validateMovieForm();
+        });
+
+        dateInput.addEventListener('change', (e) => {
+            state.movieForm.watchedDate = e.target.value;
+        });
+
+        document.getElementById('clearDateBtn').onclick = () => {
+            dateInput.value = '';
+            state.movieForm.watchedDate = null;
+        };
 
         document.getElementById('addMovieBtnInline').onclick = () => openMovieEditor(null);
-        
-        document.getElementById('cancelMovieBtn').onclick = () => { DOM.movieModal.classList.remove('active'); unlockScroll(); };
+
+        document.getElementById('cancelMovieBtn').onclick = () => {
+            DOM.movieModal.classList.remove('active');
+            unlockScroll();
+        };
+
         document.getElementById('addCriterionBtn').onclick = () => {
-            state.movieForm.criteria.push({ id: Date.now().toString(), name: "", stars: 0, notes: "" });
+            state.movieForm.criteria.push({ id: uid(), name: "", stars: 0, notes: "" });
             renderEditorCriteria();
         };
 
         posterInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
@@ -936,12 +1145,20 @@
                     const canvas = document.createElement('canvas');
                     const MAX_SIZE = 800;
                     let w = img.width, h = img.height;
-                    if (w > h && w > MAX_SIZE) { h *= MAX_SIZE/w; w = MAX_SIZE; }
-                    else if (h > MAX_SIZE) { w *= MAX_SIZE/h; h = MAX_SIZE; }
-                    canvas.width = w; canvas.height = h;
+
+                    if (w > h && w > MAX_SIZE) {
+                        h *= MAX_SIZE / w;
+                        w = MAX_SIZE;
+                    } else if (h > MAX_SIZE) {
+                        w *= MAX_SIZE / h;
+                        h = MAX_SIZE;
+                    }
+
+                    canvas.width = w;
+                    canvas.height = h;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, w, h);
-                    
+
                     state.movieForm.imageData = canvas.toDataURL('image/jpeg', 0.8);
                     posterPreview.src = state.movieForm.imageData;
                     posterPreview.style.display = 'block';
@@ -954,34 +1171,307 @@
         });
 
         document.getElementById('removePosterBtn').onclick = () => {
-            state.movieForm.imageData = null; posterPreview.src = ''; posterPreview.style.display = 'none';
-            document.getElementById('posterPlaceholder').style.display = 'flex'; document.getElementById('removePosterBtn').style.display = 'none';
+            state.movieForm.imageData = null;
+            posterPreview.src = '';
+            posterPreview.style.display = 'none';
+            document.getElementById('posterPlaceholder').style.display = 'flex';
+            document.getElementById('removePosterBtn').style.display = 'none';
         };
+
+        function buildFormForCategory(categoryId, existingCriteria = []) {
+            return makeCriteria(getTemplateCriteriaNames(categoryId), existingCriteria);
+        }
+
+        function applyCategoryTemplateToCurrentForm(categoryId, templateNamesOverride = null) {
+            state.movieForm.selectedCategoryId = categoryId;
+            const templateNames = templateNamesOverride || getTemplateCriteriaNames(categoryId);
+
+            if (state.movieForm.seasonMode) {
+                if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
+                    state.movieForm.seasons = [createSeason(categoryId, state.movieForm.criteria || [])];
+                    state.movieForm.activeSeasonIndex = 0;
+                    state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+                    return;
+                }
+
+                state.movieForm.seasons = state.movieForm.seasons.map(season => ({
+                    ...season,
+                    criteria: makeCriteria(templateNames, season.criteria || [])
+                }));
+
+                state.movieForm.activeSeasonIndex = Math.min(
+                    state.movieForm.activeSeasonIndex,
+                    state.movieForm.seasons.length - 1
+                );
+                state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
+            } else {
+                state.movieForm.criteria = makeCriteria(templateNames, state.movieForm.criteria || []);
+            }
+        }
+
+        function updateSeasonSectionVisibility() {
+            const showSeasonSection = isSeriesTab(state.movieForm.tabID);
+            DOM.seasonModeSection.style.display = showSeasonSection ? 'block' : 'none';
+
+            if (!showSeasonSection) {
+                DOM.seasonControls.style.display = 'none';
+                DOM.seasonModeToggle.checked = false;
+                return;
+            }
+
+            DOM.seasonModeToggle.checked = !!state.movieForm.seasonMode;
+            DOM.seasonControls.style.display = state.movieForm.seasonMode ? 'block' : 'none';
+        }
+
+        function renderSeasonTabs() {
+            DOM.seasonTabBar.innerHTML = '';
+
+            if (!state.movieForm.seasonMode) {
+                activeSeasonLabel.textContent = '';
+                DOM.seasonControls.style.display = 'none';
+                return;
+            }
+
+            DOM.seasonControls.style.display = 'block';
+
+            state.movieForm.seasons.forEach((season, index) => {
+                const item = document.createElement('div');
+                item.className = `season-tab-item ${index === state.movieForm.activeSeasonIndex ? 'active' : ''}`;
+
+                const selectBtn = document.createElement('button');
+                selectBtn.type = 'button';
+                selectBtn.className = 'season-tab-button';
+                selectBtn.textContent = `Staffel ${index + 1}`;
+                selectBtn.onclick = () => {
+                    selectSeason(index);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'season-tab-delete';
+                deleteBtn.setAttribute('aria-label', `Staffel ${index + 1} löschen`);
+                deleteBtn.innerHTML = trashIconSvg;
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteSeason(index);
+                };
+
+                item.appendChild(selectBtn);
+                item.appendChild(deleteBtn);
+                DOM.seasonTabBar.appendChild(item);
+            });
+
+            activeSeasonLabel.textContent = `Aktuelle Staffel: Staffel ${state.movieForm.activeSeasonIndex + 1}`;
+        }
+
+        function selectSeason(index) {
+            if (!state.movieForm.seasonMode) return;
+            if (index < 0 || index >= state.movieForm.seasons.length) return;
+
+            state.movieForm.activeSeasonIndex = index;
+            state.movieForm.criteria = state.movieForm.seasons[index].criteria;
+            renderSeasonTabs();
+            renderEditorCriteria();
+        }
+
+        function addSeason() {
+            if (!state.movieForm.seasonMode) return;
+
+            const categoryId = state.movieForm.selectedCategoryId || state.categories[0]?.id || null;
+            const newSeason = createSeason(categoryId, []);
+            state.movieForm.seasons.push(newSeason);
+            state.movieForm.activeSeasonIndex = state.movieForm.seasons.length - 1;
+            state.movieForm.criteria = newSeason.criteria;
+            renderSeasonTabs();
+            renderEditorCriteria();
+        }
+
+        function deleteSeason(index) {
+            if (!state.movieForm.seasonMode) return;
+
+            openDeleteModal(`Staffel ${index + 1}`, () => {
+                state.movieForm.seasons.splice(index, 1);
+
+                if (state.movieForm.seasons.length === 0) {
+                    state.movieForm.seasons.push(createSeason(state.movieForm.selectedCategoryId, []));
+                }
+
+                if (state.movieForm.activeSeasonIndex > index) {
+                    state.movieForm.activeSeasonIndex -= 1;
+                } else if (state.movieForm.activeSeasonIndex === index) {
+                    state.movieForm.activeSeasonIndex = Math.min(index, state.movieForm.seasons.length - 1);
+                }
+
+                state.movieForm.activeSeasonIndex = Math.max(0, Math.min(state.movieForm.activeSeasonIndex, state.movieForm.seasons.length - 1));
+                state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
+                renderSeasonTabs();
+                renderEditorCriteria();
+            });
+        }
+
+        function enableSeasonMode() {
+            const categoryId = state.movieForm.selectedCategoryId || state.categories[0]?.id || null;
+
+            if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
+                state.movieForm.seasons = [createSeason(categoryId, state.movieForm.criteria || [])];
+            }
+
+            state.movieForm.seasonMode = true;
+            state.movieForm.activeSeasonIndex = 0;
+            state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+
+            renderSeasonTabs();
+            renderEditorCriteria();
+            updateSeasonSectionVisibility();
+            validateMovieForm();
+        }
+
+        function disableSeasonMode() {
+            state.movieForm.seasonMode = false;
+            state.movieForm.seasons = [];
+            state.movieForm.activeSeasonIndex = 0;
+            state.movieForm.criteria = buildFormForCategory(state.movieForm.selectedCategoryId || state.categories[0]?.id || null, []);
+            renderSeasonTabs();
+            renderEditorCriteria();
+            updateSeasonSectionVisibility();
+            validateMovieForm();
+        }
+
+        DOM.seasonModeToggle.addEventListener('change', () => {
+            if (DOM.seasonModeToggle.checked) {
+                enableSeasonMode();
+            } else {
+                DOM.seasonModeToggle.checked = true;
+                openConfirmModal({
+                    title: 'Alle Staffelbewertungen löschen?',
+                    message: 'Wenn du auf <b>Gesamtbewertung</b> umstellst, werden alle Staffelbewertungen dauerhaft gelöscht. Danach startet das Formular mit einer leeren Gesamtbewertung.',
+                    confirmText: 'Gesamtbewertung aktivieren',
+                    onConfirm: () => {
+                        disableSeasonMode();
+                        DOM.seasonModeToggle.checked = false;
+                    }
+                });
+            }
+        });
+
+        DOM.addSeasonBtn.onclick = () => addSeason();
+
+        let seasonSwipeStart = null;
+        DOM.seasonTabBar.addEventListener('touchstart', (e) => {
+            if (!state.movieForm.seasonMode) return;
+            const t = e.touches[0];
+            seasonSwipeStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+
+        DOM.seasonTabBar.addEventListener('touchend', (e) => {
+            if (!state.movieForm.seasonMode || !seasonSwipeStart) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - seasonSwipeStart.x;
+            const dy = t.clientY - seasonSwipeStart.y;
+
+            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                if (dx < 0) {
+                    selectSeason(Math.min(state.movieForm.activeSeasonIndex + 1, state.movieForm.seasons.length - 1));
+                } else {
+                    selectSeason(Math.max(state.movieForm.activeSeasonIndex - 1, 0));
+                }
+            }
+
+            seasonSwipeStart = null;
+        });
+
+        DOM.seasonTabBar.addEventListener('touchcancel', () => {
+            seasonSwipeStart = null;
+        });
 
         function openMovieEditor(movie) {
             lockScroll();
             state.editingMovieId = movie ? movie.id : null;
             document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
-            
+
+            const currentCategoryId = movie?.selectedCategoryId || state.categories[0]?.id || null;
+
             if (movie) {
-                state.movieForm = JSON.parse(JSON.stringify(movie));
-            } else {
                 state.movieForm = {
-                    title: "", imageData: null, watchedDate: new Date().toISOString().split('T')[0],
-                    tabID: state.currentTabId, selectedCategoryId: state.categories[0]?.id,
-                    criteria: state.categories[0] ? state.categories[0].criteriaNames.map(n => ({ id: Math.random().toString(), name: n, stars: 0, notes: "" })) : []
+                    title: movie.title || '',
+                    imageData: movie.imageData || null,
+                    watchedDate: movie.watchedDate || new Date().toISOString().split('T')[0],
+                    tabID: movie.tabID || state.currentTabId,
+                    selectedCategoryId: currentCategoryId,
+                    criteria: [],
+                    seasonMode: false,
+                    seasons: [],
+                    activeSeasonIndex: 0
                 };
+
+                const existingSeasons = Array.isArray(movie.seasons) ? movie.seasons : [];
+                const inferSeasonMode = isSeriesTab(movie.tabID) && (movie.seasonMode === true || existingSeasons.length > 0);
+
+                if (inferSeasonMode) {
+                    const normalizedSeasons = existingSeasons.length > 0
+                        ? existingSeasons.map(season => ({
+                            id: season.id || uid(),
+                            criteria: Array.isArray(season.criteria) ? season.criteria.map(c => ({
+                                id: c.id || uid(),
+                                name: c.name || '',
+                                stars: Number(c.stars || 0),
+                                notes: c.notes || ''
+                            })) : buildFormForCategory(currentCategoryId, [])
+                        }))
+                        : [createSeason(currentCategoryId, Array.isArray(movie.criteria) ? movie.criteria : [])];
+
+                    state.movieForm.seasonMode = true;
+                    state.movieForm.seasons = normalizedSeasons;
+                    state.movieForm.activeSeasonIndex = 0;
+                    state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+                } else {
+                    state.movieForm.seasonMode = false;
+                    state.movieForm.seasons = [];
+                    state.movieForm.activeSeasonIndex = 0;
+                    state.movieForm.criteria = Array.isArray(movie.criteria) && movie.criteria.length > 0
+                        ? movie.criteria.map(c => ({
+                            id: c.id || uid(),
+                            name: c.name || '',
+                            stars: Number(c.stars || 0),
+                            notes: c.notes || ''
+                        }))
+                        : buildFormForCategory(currentCategoryId, []);
+                }
+            } else {
+                const categoryId = state.categories[0]?.id || null;
+                const baseCriteria = buildFormForCategory(categoryId, []);
+
+                state.movieForm = {
+                    title: "",
+                    imageData: null,
+                    watchedDate: new Date().toISOString().split('T')[0],
+                    tabID: state.currentTabId,
+                    selectedCategoryId: categoryId,
+                    criteria: baseCriteria,
+                    seasonMode: isSeriesTab(state.currentTabId),
+                    seasons: [],
+                    activeSeasonIndex: 0
+                };
+
+                if (state.movieForm.seasonMode) {
+                    state.movieForm.seasons = [createSeason(categoryId, [])];
+                    state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+                }
             }
 
             titleInput.value = state.movieForm.title;
             dateInput.value = state.movieForm.watchedDate || '';
-            
+
             if (state.movieForm.imageData) {
-                posterPreview.src = state.movieForm.imageData; posterPreview.style.display = 'block';
-                document.getElementById('posterPlaceholder').style.display = 'none'; document.getElementById('removePosterBtn').style.display = 'flex';
+                posterPreview.src = state.movieForm.imageData;
+                posterPreview.style.display = 'block';
+                document.getElementById('posterPlaceholder').style.display = 'none';
+                document.getElementById('removePosterBtn').style.display = 'flex';
             } else {
-                posterPreview.src = ''; posterPreview.style.display = 'none';
-                document.getElementById('posterPlaceholder').style.display = 'flex'; document.getElementById('removePosterBtn').style.display = 'none';
+                posterPreview.src = '';
+                posterPreview.style.display = 'none';
+                document.getElementById('posterPlaceholder').style.display = 'flex';
+                document.getElementById('removePosterBtn').style.display = 'none';
             }
 
             const delBtn = document.getElementById('deleteMovieBtn');
@@ -994,59 +1484,59 @@
                         unlockScroll();
                     });
                 };
-            } else { delBtn.style.display = 'none'; }
+            } else {
+                delBtn.style.display = 'none';
+            }
 
+            updateSeasonSectionVisibility();
             renderEditorCategories();
+            renderSeasonTabs();
             renderEditorCriteria();
             validateMovieForm();
             DOM.movieModal.classList.add('active');
         }
 
-        // Render Categories mit Live-Verschiebung im Grid
         function renderEditorCategories() {
             const list = document.getElementById('categoryList');
             list.innerHTML = '';
+
             state.categories.forEach((cat) => {
                 const el = document.createElement('div');
                 el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
                 el.innerText = cat.name;
                 el.setAttribute('data-id', cat.id);
-                
+
                 setupLongPress(
                     el,
-                    () => { openSimpleModal('EditCategory', cat); }, 
-                    () => { 
+                    () => { openSimpleModal('EditCategory', cat); },
+                    () => {
                         openDeleteModal(cat.name, () => {
                             deleteDoc(doc(db, "categories", cat.id));
                         });
-                    }, 
-                    () => { 
-                        state.movieForm.selectedCategoryId = cat.id;
-                        let newCriteria = [];
-                        cat.criteriaNames.forEach(name => {
-                            const existing = state.movieForm.criteria.find(c => c.name === name);
-                            newCriteria.push(existing ? existing : { id: Math.random().toString(), name: name, stars: 0, notes: "" });
-                        });
-                        state.movieForm.criteria = newCriteria;
+                    },
+                    () => {
+                        applyCategoryTemplateToCurrentForm(cat.id);
                         renderEditorCategories();
+                        renderSeasonTabs();
                         renderEditorCriteria();
+                        validateMovieForm();
                     }
                 );
 
                 el.draggable = true;
-                el.ondragstart = (e) => { 
+                el.ondragstart = (e) => {
                     dragEl = el;
                     dragEl.classList.add('is-dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 };
-                
+
                 el.ondragover = (e) => {
                     e.preventDefault();
                     if (!dragEl || dragEl === el) return;
                     const rect = el.getBoundingClientRect();
                     const centerX = rect.left + rect.width / 2;
                     const centerY = rect.top + rect.height / 2;
-                    
+
                     if (e.clientY < centerY || (e.clientY === centerY && e.clientX < centerX)) {
                         list.insertBefore(dragEl, el);
                     } else {
@@ -1074,32 +1564,50 @@
         function renderEditorCriteria() {
             const container = document.getElementById('criteriaContainer');
             container.innerHTML = '';
-            state.movieForm.criteria.forEach((crit, index) => {
+
+            const criteria = state.movieForm.criteria || [];
+            activeSeasonLabel.textContent = state.movieForm.seasonMode
+                ? `Aktuelle Staffel: Staffel ${state.movieForm.activeSeasonIndex + 1}`
+                : '';
+
+            criteria.forEach((crit, index) => {
                 const card = document.createElement('div');
                 card.className = 'criterion-card';
+
                 let starsHtml = '';
-                for(let i=1; i<=5; i++) starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
+                for (let i = 1; i <= 5; i++) {
+                    starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
+                }
 
                 card.innerHTML = `
                     <div class="criterion-header">
-                        <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${crit.name}">
+                        <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${escapeHtml(crit.name)}">
                         <div class="stars">${starsHtml}</div>
                         <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
                     </div>
-                    <textarea class="input-text" placeholder="Notizen...">${crit.notes}</textarea>
+                    <textarea class="input-text" placeholder="Notizen...">${escapeHtml(crit.notes)}</textarea>
                 `;
 
-                card.querySelector('input').oninput = (e) => { state.movieForm.criteria[index].name = e.target.value; };
+                card.querySelector('input').oninput = (e) => {
+                    state.movieForm.criteria[index].name = e.target.value;
+                };
+
                 card.querySelectorAll('.star').forEach(s => {
-                    s.onclick = (e) => { state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx')); renderEditorCriteria(); };
+                    s.onclick = (e) => {
+                        state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx'), 10);
+                        renderEditorCriteria();
+                    };
                 });
-                card.querySelector('textarea').oninput = (e) => { state.movieForm.criteria[index].notes = e.target.value; };
-                
-                card.querySelector('.btn-icon').onclick = () => { 
+
+                card.querySelector('textarea').oninput = (e) => {
+                    state.movieForm.criteria[index].notes = e.target.value;
+                };
+
+                card.querySelector('.btn-icon').onclick = () => {
                     const nameToDisplay = state.movieForm.criteria[index].name.trim() !== "" ? state.movieForm.criteria[index].name : "Dieses Kriterium";
                     openDeleteModal(nameToDisplay, () => {
-                        state.movieForm.criteria.splice(index, 1); 
-                        renderEditorCriteria(); 
+                        state.movieForm.criteria.splice(index, 1);
+                        renderEditorCriteria();
                     });
                 };
 
@@ -1107,90 +1615,135 @@
             });
         }
 
-        function validateMovieForm() { saveBtn.disabled = state.movieForm.title.trim().length === 0; }
+        function validateMovieForm() {
+            saveBtn.disabled = state.movieForm.title.trim().length === 0;
+        }
+
+        function normalizeSeasonStateBeforeSave() {
+            if (!state.movieForm.seasonMode) return;
+
+            if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
+                state.movieForm.seasons = [createSeason(state.movieForm.selectedCategoryId, state.movieForm.criteria || [])];
+                state.movieForm.activeSeasonIndex = 0;
+            }
+
+            state.movieForm.activeSeasonIndex = Math.max(
+                0,
+                Math.min(state.movieForm.activeSeasonIndex || 0, state.movieForm.seasons.length - 1)
+            );
+            state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
+        }
 
         saveBtn.onclick = async () => {
             if (saveBtn.disabled) return;
-            const originalText = saveBtn.innerText; saveBtn.innerText = "Speichert..."; saveBtn.disabled = true;
 
-            const data = {
-                title: state.movieForm.title, imageData: state.movieForm.imageData,
-                criteria: state.movieForm.criteria, watchedDate: state.movieForm.watchedDate,
-                tabID: state.movieForm.tabID, dateAdded: state.editingMovieId ? undefined : new Date().toISOString()
+            normalizeSeasonStateBeforeSave();
+
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Speichert...";
+            saveBtn.disabled = true;
+
+            const baseData = {
+                title: state.movieForm.title,
+                imageData: state.movieForm.imageData,
+                watchedDate: state.movieForm.watchedDate,
+                tabID: state.movieForm.tabID,
+                selectedCategoryId: state.movieForm.selectedCategoryId,
+                seasonMode: !!state.movieForm.seasonMode,
+                criteria: state.movieForm.criteria
             };
 
-            if(data.dateAdded === undefined) {
-                delete data.dateAdded;
+            if (state.movieForm.seasonMode) {
+                baseData.seasons = state.movieForm.seasons;
+            } else {
+                baseData.seasons = [];
+            }
+
+            if (!state.editingMovieId) {
+                baseData.dateAdded = new Date().toISOString();
             }
 
             try {
                 if (state.editingMovieId) {
-                    await updateDoc(doc(db, "movies", state.editingMovieId), data);
-                } else { 
-                    await addDoc(collection(db, "movies"), data); 
+                    await updateDoc(doc(db, "movies", state.editingMovieId), baseData);
+                } else {
+                    await addDoc(collection(db, "movies"), baseData);
                 }
                 DOM.movieModal.classList.remove('active');
                 unlockScroll();
             } catch (error) {
-                console.error(error); alert("Fehler: " + error.message);
-            } finally { saveBtn.innerText = originalText; validateMovieForm(); }
+                console.error(error);
+                alert("Fehler: " + error.message);
+            } finally {
+                saveBtn.innerText = originalText;
+                validateMovieForm();
+            }
         };
 
-        // Simple Modals (Tabs / Categories)
         document.getElementById('newCategoryBtn').onclick = () => openSimpleModal('Category', null);
-        document.getElementById('cancelSimpleModalBtn').onclick = () => { DOM.simpleModal.classList.remove('active'); unlockScroll(); };
-        
+        document.getElementById('cancelSimpleModalBtn').onclick = () => {
+            DOM.simpleModal.classList.remove('active');
+            unlockScroll();
+        };
+
         function openSimpleModal(type, item) {
-            lockScroll(); 
+            lockScroll();
             const titleEl = document.getElementById('simpleModalTitle');
             const bodyEl = document.getElementById('simpleModalBody');
             const saveBtn = document.getElementById('saveSimpleModalBtn');
-            
+
             if (type === 'Tab') {
                 titleEl.innerText = 'Neuer Tab';
                 bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
                 saveBtn.onclick = async () => {
                     const val = document.getElementById('tabNameInput').value.trim();
-                    if(val) {
+                    if (val) {
                         try {
                             saveBtn.disabled = true;
                             await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
-                            DOM.simpleModal.classList.remove('active'); unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
+                            DOM.simpleModal.classList.remove('active');
+                            unlockScroll();
+                        } catch (error) {
+                            alert("Fehler: " + error.message);
+                        } finally {
+                            saveBtn.disabled = false;
+                        }
                     }
                 };
-            } 
-            else if (type === 'EditTab') {
+            } else if (type === 'EditTab') {
                 titleEl.innerText = 'Tab umbenennen';
-                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${item.name}">`;
+                bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${escapeHtml(item.name)}">`;
                 saveBtn.onclick = async () => {
                     const val = document.getElementById('tabNameInput').value.trim();
-                    if(val) {
+                    if (val) {
                         try {
                             saveBtn.disabled = true;
                             await updateDoc(doc(db, "tabs", item.id), { name: val });
-                            DOM.simpleModal.classList.remove('active'); unlockScroll();
-                        } catch (error) { alert("Fehler: " + error.message); } finally { saveBtn.disabled = false; }
+                            DOM.simpleModal.classList.remove('active');
+                            unlockScroll();
+                        } catch (error) {
+                            alert("Fehler: " + error.message);
+                        } finally {
+                            saveBtn.disabled = false;
+                        }
                     }
                 };
-            }
-            else if (type === 'Category') {
+            } else if (type === 'Category') {
                 titleEl.innerText = 'Neue Vorlage';
                 buildCategoryEditorBody(bodyEl, "", ["Spannung"]);
                 saveBtn.onclick = async () => saveCategoryData(null, saveBtn);
-            }
-            else if (type === 'EditCategory') {
+            } else if (type === 'EditCategory') {
                 titleEl.innerText = 'Vorlage bearbeiten';
                 buildCategoryEditorBody(bodyEl, item.name, item.criteriaNames);
                 saveBtn.onclick = async () => saveCategoryData(item, saveBtn);
             }
+
             DOM.simpleModal.classList.add('active');
         }
 
-        // Hilfsfunktionen für den Vorlagen-Editor
         function buildCategoryEditorBody(container, nameVal, criteriaArr) {
             container.innerHTML = `
-                <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${nameVal}" style="margin-bottom: 20px;">
+                <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${escapeHtml(nameVal)}" style="margin-bottom: 20px;">
                 <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
                 <div id="newCatCriteriaContainer"></div>
                 <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
@@ -1200,14 +1753,16 @@
 
             const addCritRow = (val) => {
                 const div = document.createElement('div');
-                div.className = 'flex-row'; div.style.marginBottom = '10px'; div.style.gap = '10px';
+                div.className = 'flex-row';
+                div.style.marginBottom = '10px';
+                div.style.gap = '10px';
                 div.innerHTML = `
-                    <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${val}">
+                    <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${escapeHtml(val)}">
                     <button type="button" class="btn-icon delete-cat-crit-btn" style="padding: 10px; font-size: 16px;">
                         ${trashIconSvg}
                     </button>
                 `;
-                
+
                 div.querySelector('.delete-cat-crit-btn').onclick = () => {
                     const inputVal = div.querySelector('.cat-crit-input').value.trim();
                     const nameToDisplay = inputVal !== "" ? inputVal : "Dieses Kriterium";
@@ -1215,7 +1770,7 @@
                         div.remove();
                     });
                 };
-                
+
                 critContainer.appendChild(div);
             };
 
@@ -1228,20 +1783,39 @@
             const name = document.getElementById('catNameInput').value.trim();
             const inputs = document.querySelectorAll('.cat-crit-input');
             const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
-            
-            if(name && criteria.length > 0) {
+
+            if (name && criteria.length > 0) {
                 try {
                     saveBtn.disabled = true;
+
                     if (existingItem) {
                         await updateDoc(doc(db, "categories", existingItem.id), { name: name, criteriaNames: criteria });
+                        if (state.movieForm.selectedCategoryId === existingItem.id) {
+                            applyCategoryTemplateToCurrentForm(existingItem.id, criteria);
+                            renderEditorCategories();
+                            renderSeasonTabs();
+                            renderEditorCriteria();
+                        }
                     } else {
-                        const newCatRef = await addDoc(collection(db, "categories"), { name: name, criteriaNames: criteria, orderIndex: state.categories.length });
+                        const newCatRef = await addDoc(collection(db, "categories"), {
+                            name: name,
+                            criteriaNames: criteria,
+                            orderIndex: state.categories.length
+                        });
                         state.movieForm.selectedCategoryId = newCatRef.id;
+                        applyCategoryTemplateToCurrentForm(newCatRef.id, criteria);
+                        renderEditorCategories();
+                        renderSeasonTabs();
+                        renderEditorCriteria();
                     }
+
                     DOM.simpleModal.classList.remove('active');
                     unlockScroll();
-                } catch (error) { alert("Fehler: " + error.message); } 
-                finally { saveBtn.disabled = false; }
+                } catch (error) {
+                    alert("Fehler: " + error.message);
+                } finally {
+                    saveBtn.disabled = false;
+                }
             }
         }
     </script>
