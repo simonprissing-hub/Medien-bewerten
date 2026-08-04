@@ -118,21 +118,21 @@
         }
         .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; padding: 5px; }
 
-        /* NEUER BUTTON (INLINE) */
+        /* BUTTON (INLINE) - VERKLEINERT */
         .action-bar-inline {
-            padding: 20px 20px 0 20px;
+            padding: 12px 20px 0 20px;
             display: flex;
             justify-content: flex-start;
         }
 
         .add-btn-inline {
-            padding: 12px 20px;
-            font-size: 16px;
+            padding: 8px 14px;
+            font-size: 14px;
             font-weight: 600;
             background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: background-color 0.2s, transform 0.1s;
@@ -143,7 +143,7 @@
         }
 
         /* Movie List */
-        .movie-list { padding: 20px; display: grid; gap: 15px; }
+        .movie-list { padding: 15px 20px 20px 20px; display: grid; gap: 15px; }
         .movie-row {
             display: flex; gap: 15px; padding: 10px; border-radius: 12px;
             background-color: var(--surface-color); box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -363,7 +363,7 @@
         <!-- Tabs injected by JS -->
     </div>
 
-    <!-- Neuer Inline-Button zum Hinzufügen (direkt über der Liste) -->
+    <!-- Neuer Inline-Button zum Hinzufügen (dezent verkleinert) -->
     <div class="action-bar-inline">
         <button type="button" class="add-btn-inline" id="addMovieBtnInline">＋ Neuen Eintrag hinzufügen</button>
     </div>
@@ -575,7 +575,6 @@
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
 
-        // Standard auf "6" (Monate) setzen, falls noch nichts hinterlegt ist
         const savedAutoDelete = localStorage.getItem('autoDeleteSetting') || '6';
         DOM.autoDeleteSelect.value = savedAutoDelete;
 
@@ -919,7 +918,6 @@
         dateInput.addEventListener('change', (e) => { state.movieForm.watchedDate = e.target.value; });
         document.getElementById('clearDateBtn').onclick = () => { dateInput.value = ''; state.movieForm.watchedDate = null; };
 
-        /* NEUER BUTTON EVENT LISTENER */
         document.getElementById('addMovieBtnInline').onclick = () => openMovieEditor(null);
         
         document.getElementById('cancelMovieBtn').onclick = () => { DOM.movieModal.classList.remove('active'); unlockScroll(); };
