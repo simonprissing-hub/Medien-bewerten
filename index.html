@@ -39,11 +39,25 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            margin: 0; padding: 0;
+            margin: 0;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
             transition: background-color 0.3s, color 0.3s;
+
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
         }
 
         .icon {
@@ -52,6 +66,7 @@
             vertical-align: -0.125em;
             fill: currentColor;
         }
+
         .icon-large {
             width: 32px;
             height: 32px;
@@ -79,35 +94,74 @@
         h1, h2, h3, p { margin: 0; }
 
         .header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 20px; background-color: var(--surface-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: var(--surface-color);
             border-bottom: 1px solid var(--border-color);
-            position: sticky; top: 0; z-index: 100;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+
         .header h1 { font-size: 20px; font-weight: 600; }
+
         .header-actions button {
-            background: none; border: none; color: var(--accent-color);
-            font-size: 24px; cursor: pointer; margin-left: 15px;
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 24px;
+            cursor: pointer;
+            margin-left: 15px;
         }
 
         .tab-bar {
-            display: flex; gap: 20px; overflow-x: auto;
-            padding: 15px 20px; background-color: var(--surface-color);
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 15px 20px;
+            background-color: var(--surface-color);
             scrollbar-width: none;
         }
+
         .tab-bar::-webkit-scrollbar { display: none; }
 
         .tab-item {
-            cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
-            font-weight: 500; color: var(--text-primary); white-space: nowrap;
-            position: relative; padding: 5px 10px; transition: background-color 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            position: relative;
+            padding: 5px 10px;
+            transition: background-color 0.2s;
         }
-        .tab-item.active { color: var(--accent-color); font-weight: 700; }
+
+        .tab-item.active {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
         .tab-item.active::after {
-            content: ''; width: 100%; height: 3px; background-color: var(--accent-color);
-            border-radius: 2px; position: absolute; bottom: -5px;
+            content: '';
+            width: 100%;
+            height: 3px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+            position: absolute;
+            bottom: -5px;
         }
-        .add-tab-btn { color: var(--accent-color); cursor: pointer; font-size: 20px; padding: 5px; }
+
+        .add-tab-btn {
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+        }
 
         .action-bar-inline {
             padding: 12px 20px 0 20px;
@@ -127,44 +181,113 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: background-color 0.2s, transform 0.1s;
         }
+
         .add-btn-inline:active { transform: scale(0.98); }
 
-        .movie-list { padding: 15px 20px 20px 20px; display: grid; gap: 15px; }
+        .movie-list {
+            padding: 15px 20px 20px 20px;
+            display: grid;
+            gap: 15px;
+        }
+
         .movie-row {
-            display: flex; gap: 15px; padding: 10px; border-radius: 12px;
-            background-color: var(--surface-color); box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            cursor: pointer; transition: transform 0.1s;
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            border-radius: 12px;
+            background-color: var(--surface-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.1s;
         }
+
         .movie-row:active { transform: scale(0.98); }
+
         .movie-poster {
-            width: 80px; height: 120px; border-radius: 8px; object-fit: cover;
-            background-color: rgba(0, 122, 255, 0.1); display: flex;
-            align-items: center; justify-content: center; color: var(--accent-color);
-            font-size: 30px; overflow: hidden;
+            width: 80px;
+            height: 120px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: rgba(0, 122, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 30px;
+            overflow: hidden;
         }
-        .movie-poster img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        .movie-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
-        .movie-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
-        .movie-rating { color: var(--star-color); font-weight: 600; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
-        .movie-date { font-size: 12px; color: var(--text-secondary); }
-        .empty-state { text-align: center; padding: 50px 20px; color: var(--text-secondary); }
+
+        .movie-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
+        .movie-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .movie-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .movie-rating {
+            color: var(--star-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .movie-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-secondary);
+        }
 
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: var(--modal-overlay-bg);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            display: none; z-index: 1000;
-            justify-content: center; align-items: flex-end;
+            display: none;
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
             transition: opacity 0.2s ease-in-out;
         }
+
         .modal-overlay.active { display: flex; }
 
         .modal-content {
             background-color: var(--surface-color);
             color: var(--text-primary);
-            width: 100%; max-width: 800px;
-            height: 90vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
             box-shadow: var(--modal-shadow);
             border: 1px solid var(--modal-border);
@@ -190,24 +313,49 @@
         }
 
         .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 20px; background-color: var(--surface-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background-color: var(--surface-color);
             border-bottom: 1px solid var(--border-color);
         }
-        .btn-text { background: none; border: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+        .btn-text {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .btn-cancel { color: var(--text-secondary); }
         .btn-save { color: var(--accent-color); font-weight: 600; }
         .btn-save:disabled { color: var(--border-color); cursor: not-allowed; }
 
-        .modal-body { padding: 20px; overflow-y: auto; flex: 1; min-width: 0; }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            min-width: 0;
+        }
 
         .form-group { margin-bottom: 20px; }
+
         .input-text {
-            width: 100%; padding: 12px 15px; border-radius: 10px;
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
             border: 1px solid var(--border-color);
-            background-color: var(--input-bg); color: var(--text-primary);
-            font-size: 16px; outline: none; transition: border-color 0.2s;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
         }
+
         .input-text:focus { border-color: var(--accent-color); }
 
         input[type="date"], select.input-text {
@@ -217,34 +365,79 @@
             background-color: var(--input-bg);
             position: relative;
         }
+
         input[type="date"]::-webkit-calendar-picker-indicator {
-            background: transparent; bottom: 0; color: transparent;
-            cursor: pointer; height: auto; left: 0; position: absolute;
-            right: 0; top: 0; width: auto;
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
         }
 
         .poster-picker {
-            width: 100%; aspect-ratio: 2/3; background-color: rgba(0, 122, 255, 0.08);
+            width: 100%;
+            aspect-ratio: 2/3;
+            background-color: rgba(0, 122, 255, 0.08);
             border: 2px dashed var(--accent-color);
-            border-radius: 12px; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; color: var(--accent-color); cursor: pointer;
-            position: relative; overflow: hidden; margin-bottom: 10px; text-align: center;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 10px;
+            text-align: center;
         }
-        .poster-picker img { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
+
+        .poster-picker img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
         .poster-picker input[type="file"] { display: none; }
 
-        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            margin-top: 20px;
+        }
 
         .category-scroll {
-            display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 5px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-bottom: 5px;
         }
 
         .category-pill {
-            padding: 8px 16px; border-radius: 20px; background-color: var(--input-bg);
+            padding: 8px 16px;
+            border-radius: 20px;
+            background-color: var(--input-bg);
             border: 1px solid var(--border-color);
-            color: var(--text-primary); white-space: nowrap; cursor: pointer; font-size: 14px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            cursor: pointer;
+            font-size: 14px;
         }
-        .category-pill.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+        .category-pill.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
 
         .toggle-row {
             display: flex;
@@ -264,11 +457,13 @@
             height: 32px;
             flex-shrink: 0;
         }
+
         .switch input {
             opacity: 0;
             width: 0;
             height: 0;
         }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -277,6 +472,7 @@
             transition: 0.2s;
             border-radius: 999px;
         }
+
         .slider:before {
             position: absolute;
             content: "";
@@ -289,6 +485,7 @@
             border-radius: 50%;
             box-shadow: 0 1px 3px rgba(0,0,0,0.18);
         }
+
         .switch input:checked + .slider { background-color: var(--accent-color); }
         .switch input:checked + .slider:before { transform: translateX(20px); }
 
@@ -313,6 +510,7 @@
             max-width: 100%;
             min-width: 0;
         }
+
         .season-tab-bar::-webkit-scrollbar { display: none; }
 
         .season-tab-item {
@@ -328,11 +526,13 @@
             gap: 0;
             cursor: pointer;
         }
+
         .season-tab-item.active {
             background: var(--accent-color);
             color: white;
             border-color: var(--accent-color);
         }
+
         .season-tab-button {
             background: none;
             border: none;
@@ -345,28 +545,86 @@
         }
 
         .criterion-card {
-            background-color: var(--input-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;
+            background-color: var(--input-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
             border: 1px solid var(--border-color);
         }
-        .criterion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
-        .stars { display: flex; gap: 5px; font-size: 20px; color: var(--border-color); cursor: pointer; }
-        .star.filled { color: var(--star-color); }
-        .btn-icon { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-        textarea.input-text { resize: vertical; min-height: 60px; font-size: 14px; }
 
-        .flex-row { display: flex; justify-content: space-between; align-items: center; }
+        .criterion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .stars {
+            display: flex;
+            gap: 5px;
+            font-size: 20px;
+            color: var(--border-color);
+            cursor: pointer;
+        }
+
+        .star.filled { color: var(--star-color); }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        textarea.input-text {
+            resize: vertical;
+            min-height: 60px;
+            font-size: 14px;
+        }
+
+        .flex-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .btn-primary {
-            display: block; width: 100%; padding: 12px; border-radius: 10px;
-            background: var(--accent-color); color: white; border: none;
-            font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; margin-top: 10px;
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 10px;
         }
 
         .action-menu-btn {
-            display: flex; width: 100%; padding: 14px; border-radius: 10px;
-            background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);
-            font-size: 17px; cursor: pointer; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px;
+            display: flex;
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            font-size: 17px;
+            cursor: pointer;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
             font-weight: 500;
         }
+
         .action-menu-btn.danger { color: var(--danger-color); }
 
         .settings-section-title {
@@ -377,6 +635,7 @@
             color: var(--text-secondary);
             margin: 0 0 8px 4px;
         }
+
         .settings-group {
             background: var(--input-bg);
             border-radius: 12px;
@@ -384,6 +643,7 @@
             overflow: hidden;
             margin-bottom: 24px;
         }
+
         .settings-row {
             display: flex;
             align-items: center;
@@ -391,17 +651,24 @@
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
         }
+
         .settings-row:last-child { border-bottom: none; }
+
         .settings-row-interactive {
             cursor: pointer;
             transition: background-color 0.15s;
         }
-        .settings-row-interactive:active { background-color: var(--surface-secondary); }
+
+        .settings-row-interactive:active {
+            background-color: var(--surface-secondary);
+        }
+
         .settings-label {
             font-size: 15px;
             font-weight: 500;
             color: var(--text-primary);
         }
+
         .settings-value {
             font-size: 14px;
             color: var(--text-secondary);
@@ -422,7 +689,7 @@
 <body>
 
     <div class="header">
-        <h1>Bibliotek</h1>
+        <h1>Mein Filmtagebuch</h1>
         <div class="header-actions">
             <button type="button" id="mainMenuBtn" aria-label="Einstellungen">
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style="font-size: 22px;">
@@ -498,7 +765,10 @@
                         </label>
                         <div class="flex-row" style="margin-bottom: 15px;">
                             <button type="button" class="btn-text btn-cancel" id="removePosterBtn" style="display:none; font-size:14px; width: 100%; justify-content: center;">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
                                 Bild entfernen
                             </button>
                         </div>
@@ -507,7 +777,10 @@
                             <div class="flex-row">
                                 <strong>Gesehen am:</strong>
                                 <button type="button" class="btn-icon" id="clearDateBtn" style="font-size: 18px;">
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                    </svg>
                                 </button>
                             </div>
                             <input type="date" class="input-text" id="watchedDateInput" style="margin-top: 10px;">
@@ -572,11 +845,16 @@
     <div class="modal-overlay" id="actionMenuModal" style="z-index: 1900;">
         <div class="modal-content modal-dialog-sm" style="padding: 20px;">
             <button type="button" class="action-menu-btn" id="actionMenuEditBtn">
-                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                </svg>
                 Bearbeiten
             </button>
             <button type="button" class="action-menu-btn danger" id="actionMenuDeleteBtn">
-                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
                 Löschen
             </button>
             <button type="button" class="action-menu-btn" id="actionMenuCancelBtn" style="margin-top: 10px; font-weight: bold; background: transparent;">Abbrechen</button>
@@ -734,6 +1012,22 @@
             activeSeasonLabel: document.getElementById('activeSeasonLabel')
         };
 
+        function isEditableTarget(target) {
+            return target instanceof Element && !!target.closest('input, textarea, select, [contenteditable="true"]');
+        }
+
+        document.addEventListener('contextmenu', (e) => {
+            if (!isEditableTarget(e.target)) {
+                e.preventDefault();
+            }
+        }, true);
+
+        document.addEventListener('selectstart', (e) => {
+            if (!isEditableTarget(e.target)) {
+                e.preventDefault();
+            }
+        }, true);
+
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
 
@@ -763,6 +1057,7 @@
         };
 
         function lockScroll() { document.body.style.overflow = 'hidden'; }
+
         function unlockScroll() {
             if (document.querySelectorAll('.modal-overlay.active').length === 0) {
                 document.body.style.overflow = '';
