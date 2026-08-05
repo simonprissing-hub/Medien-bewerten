@@ -166,7 +166,9 @@
         .action-bar-inline {
             padding: 12px 20px 0 20px;
             display: flex;
-            justify-content: flex-start;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
         }
 
         .add-btn-inline {
@@ -180,9 +182,30 @@
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: background-color 0.2s, transform 0.1s;
+            flex: 0 0 auto;
         }
 
         .add-btn-inline:active { transform: scale(0.98); }
+
+        .sort-btn-inline {
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.2s, transform 0.1s;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .sort-btn-inline:active { transform: scale(0.98); }
 
         .movie-list {
             padding: 15px 20px 20px 20px;
@@ -627,6 +650,12 @@
 
         .action-menu-btn.danger { color: var(--danger-color); }
 
+        .action-menu-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
         .settings-section-title {
             font-size: 12px;
             font-weight: 600;
@@ -682,6 +711,23 @@
             color: var(--text-secondary);
             margin-top: 6px;
         }
+
+        .sort-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-secondary);
+            margin: 0 0 8px 4px;
+        }
+
+        .sort-group {
+            margin-bottom: 18px;
+        }
+
+        .sort-menu-body {
+            padding: 20px 16px;
+        }
     </style>
 
     <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
@@ -703,6 +749,7 @@
 
     <div class="action-bar-inline">
         <button type="button" class="add-btn-inline" id="addMovieBtnInline">＋ Neuen Eintrag hinzufügen</button>
+        <button type="button" class="sort-btn-inline" id="sortMoviesBtn">Sortierung ▾</button>
     </div>
 
     <div class="movie-list" id="movieList"></div>
@@ -842,6 +889,17 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="sortModal" style="z-index: 1850;">
+        <div class="modal-content modal-dialog-sm">
+            <div class="modal-header">
+                <button type="button" class="btn-text btn-cancel" id="cancelSortModalBtn">Abbrechen</button>
+                <h3>Sortierung</h3>
+                <div style="width: 50px;"></div>
+            </div>
+            <div class="modal-body sort-menu-body" id="sortModalBody"></div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="actionMenuModal" style="z-index: 1900;">
         <div class="modal-content modal-dialog-sm" style="padding: 20px;">
             <button type="button" class="action-menu-btn" id="actionMenuEditBtn">
@@ -956,19 +1014,85 @@
             return rated.reduce((sum, c) => sum + Number(c.stars || 0), 0) / rated.length;
         }
 
-        function calculateMovieAverage(movie) {
+        function getMovieSortDate(movie) {
+            const raw = movie.dateAdded || movie.watchedDate || "";
+            const t = raw ? new Date(raw).getTime() : 0;
+            return Number.isNaN(t) ? 0 : t;
+        }
+
+        function getMovieRatingValue(movie) {
             const seasons = Array.isArray(movie.seasons) ? movie.seasons : [];
             if (seasons.length > 0) {
                 const seasonAverages = seasons
                     .map(season => calculateCriteriaAverage(season.criteria || []))
                     .filter(avg => avg > 0);
-
-                if (seasonAverages.length === 0) return "0.0";
-                const total = seasonAverages.reduce((sum, val) => sum + val, 0) / seasonAverages.length;
-                return total.toFixed(1);
+                if (seasonAverages.length === 0) return 0;
+                return seasonAverages.reduce((sum, value) => sum + value, 0) / seasonAverages.length;
             }
+            return calculateCriteriaAverage(movie.criteria || []);
+        }
 
-            return calculateCriteriaAverage(movie.criteria || []).toFixed(1);
+        function compareMovies(a, b) {
+            const option = state.sortOption || 'newestAdded';
+            const titleA = (a.title || "").toLocaleLowerCase('de');
+            const titleB = (b.title || "").toLocaleLowerCase('de');
+
+            switch (option) {
+                case 'oldestAdded': {
+                    const dateDiff = getMovieSortDate(a) - getMovieSortDate(b);
+                    return dateDiff !== 0 ? dateDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+                }
+                case 'bestRating': {
+                    const ratingDiff = getMovieRatingValue(b) - getMovieRatingValue(a);
+                    return ratingDiff !== 0 ? ratingDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+                }
+                case 'worstRating': {
+                    const ratingDiff = getMovieRatingValue(a) - getMovieRatingValue(b);
+                    return ratingDiff !== 0 ? ratingDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+                }
+                case 'alphaAZ':
+                    return titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+                case 'alphaZA':
+                    return titleB.localeCompare(titleA, 'de', { sensitivity: 'base' });
+                case 'newestAdded':
+                default: {
+                    const dateDiff = getMovieSortDate(b) - getMovieSortDate(a);
+                    return dateDiff !== 0 ? dateDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+                }
+            }
+        }
+
+        const SORT_OPTIONS = [
+            {
+                section: 'Neu hinzugefügt',
+                options: [
+                    { value: 'newestAdded', label: 'Neueste zuerst' },
+                    { value: 'oldestAdded', label: 'Älteste zuerst' }
+                ]
+            },
+            {
+                section: 'Bewertung',
+                options: [
+                    { value: 'bestRating', label: 'Beste Bewertung zuerst' },
+                    { value: 'worstRating', label: 'Schlechteste Bewertung zuerst' }
+                ]
+            },
+            {
+                section: 'Alphabetisch',
+                options: [
+                    { value: 'alphaAZ', label: 'A–Z' },
+                    { value: 'alphaZA', label: 'Z–A' }
+                ]
+            }
+        ];
+
+        function getSortLabel(option) {
+            for (const group of SORT_OPTIONS) {
+                for (const item of group.options) {
+                    if (item.value === option) return item.label;
+                }
+            }
+            return 'Sortieren';
         }
 
         let state = {
@@ -977,6 +1101,7 @@
             movies: [],
             currentTabId: null,
             editingMovieId: null,
+            sortOption: localStorage.getItem('movieSortOption') || 'newestAdded',
             movieForm: {
                 title: "",
                 imageData: null,
@@ -1004,6 +1129,9 @@
             autoDeleteSelect: document.getElementById('autoDeleteSelect'),
             movieModal: document.getElementById('movieModal'),
             simpleModal: document.getElementById('simpleModal'),
+            sortModal: document.getElementById('sortModal'),
+            sortModalBody: document.getElementById('sortModalBody'),
+            sortMoviesBtn: document.getElementById('sortMoviesBtn'),
             seasonModeSection: document.getElementById('seasonModeSection'),
             seasonModeToggle: document.getElementById('seasonModeToggle'),
             seasonControls: document.getElementById('seasonControls'),
@@ -1034,6 +1162,20 @@
         const savedAutoDelete = localStorage.getItem('autoDeleteSetting') || '6';
         DOM.autoDeleteSelect.value = savedAutoDelete;
 
+        function updateSortButtonLabel() {
+            DOM.sortMoviesBtn.innerHTML = `Sortierung <span style="opacity:.95;">▾</span>`;
+        }
+
+        updateSortButtonLabel();
+
+        function lockScroll() { document.body.style.overflow = 'hidden'; }
+
+        function unlockScroll() {
+            if (document.querySelectorAll('.modal-overlay.active').length === 0) {
+                document.body.style.overflow = '';
+            }
+        }
+
         DOM.mainMenuBtn.onclick = () => {
             lockScroll();
             DOM.settingsModal.classList.add('active');
@@ -1056,12 +1198,48 @@
             runAutoDeleteCleanup(state.movies);
         };
 
-        function lockScroll() { document.body.style.overflow = 'hidden'; }
+        DOM.sortMoviesBtn.onclick = () => {
+            renderSortModal();
+            lockScroll();
+            DOM.sortModal.classList.add('active');
+        };
 
-        function unlockScroll() {
-            if (document.querySelectorAll('.modal-overlay.active').length === 0) {
-                document.body.style.overflow = '';
+        DOM.sortModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        DOM.sortModal.addEventListener('click', (e) => {
+            if (e.target === DOM.sortModal) {
+                DOM.sortModal.classList.remove('active');
+                unlockScroll();
             }
+        });
+
+        document.getElementById('cancelSortModalBtn').onclick = () => {
+            DOM.sortModal.classList.remove('active');
+            unlockScroll();
+        };
+
+        function renderSortModal() {
+            const active = state.sortOption || 'newestAdded';
+            DOM.sortModalBody.innerHTML = SORT_OPTIONS.map(group => `
+                <div class="sort-group">
+                    <div class="sort-section-title">${escapeHtml(group.section)}</div>
+                    ${group.options.map(opt => `
+                        <button type="button" class="action-menu-btn sort-option-btn ${active === opt.value ? 'active' : ''}" data-sort="${opt.value}">
+                            ${escapeHtml(opt.label)}
+                        </button>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            DOM.sortModalBody.querySelectorAll('[data-sort]').forEach(btn => {
+                btn.onclick = () => {
+                    state.sortOption = btn.getAttribute('data-sort');
+                    localStorage.setItem('movieSortOption', state.sortOption);
+                    updateSortButtonLabel();
+                    renderMovies();
+                    DOM.sortModal.classList.remove('active');
+                    unlockScroll();
+                };
+            });
         }
 
         async function runAutoDeleteCleanup(movies) {
@@ -1193,6 +1371,7 @@
                     document.getElementById('actionMenuModal').classList.contains('active') ||
                     document.getElementById('customDeleteModal').classList.contains('active') ||
                     document.getElementById('simpleModal').classList.contains('active') ||
+                    document.getElementById('sortModal').classList.contains('active') ||
                     document.getElementById('settingsModal').classList.contains('active')
                 ) {
                     return;
@@ -1373,7 +1552,7 @@
 
         function renderMovies() {
             DOM.movieList.innerHTML = '';
-            const filtered = state.movies.filter(m => m.tabID === state.currentTabId);
+            const filtered = [...state.movies].filter(m => m.tabID === state.currentTabId).sort(compareMovies);
 
             if (filtered.length === 0) {
                 DOM.movieList.innerHTML = `
@@ -1386,7 +1565,7 @@
             }
 
             filtered.forEach(movie => {
-                const avg = calculateMovieAverage(movie);
+                const avg = getMovieRatingValue(movie).toFixed(1);
 
                 const dateStr = movie.watchedDate
                     ? `Gesehen am ${new Date(movie.watchedDate).toLocaleDateString('de-DE')}`
