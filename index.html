@@ -744,6 +744,10 @@
             </div>
             <div class="settings-section-title">Serien</div>
             <div class="settings-group">
+                <div class="settings-row settings-row-interactive" id="manageStandardCriteriaBtn">
+                    <span class="settings-label">Standard-Kriterien verwalten</span>
+                    <span class="settings-value">Bearbeiten</span>
+                </div>
                 <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
                     <span class="settings-label">Beschriftung der Staffel-Reiter</span>
                     <select class="input-text" id="seasonLabelModeSelect" style="margin: 0; font-size: 14px; cursor: pointer;">
@@ -816,7 +820,7 @@
                 <div class="editor-right">
                     <input type="text" class="input-text" id="movieTitleInput" placeholder="Titel des Films / der Serie" style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">
                     <div class="flex-row">
-                        <div class="section-title" style="margin-top:0;">Kategorie (Preset)</div>
+                        <div class="section-title" style="margin-top:0;">Vorlagen (optional)</div>
                         <button type="button" class="btn-text btn-save" id="newCategoryBtn" style="font-size: 14px;">+ Neue Vorlage</button>
                     </div>
                     <div class="category-scroll" id="categoryList"></div>
@@ -912,68 +916,223 @@
     }
   }
 </script>
+
 <script type="module">
     import { initializeApp } from "firebase/app";
     import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+
     const firebaseConfig = {
-        apiKey: "AIzaSyBbfhbNAAtz-H3gvXYDECvmnCSQznkBWDA",
-        authDomain: "medien-bewerten.firebaseapp.com",
-        projectId: "medien-bewerten",
-        storageBucket: "medien-bewerten.firebasestorage.app",
-        messagingSenderId: "494393371345",
-        appId: "1:494393371345:web:076bdefc2b0601fc7e33f0"
-    };
+            "apiKey": "AIzaSyBbfhbNAAtz-H3gvXYDECvmnCSQznkBWDA",
+            "authDomain": "medien-bewerten.firebaseapp.com",
+            "projectId": "medien-bewerten",
+            "storageBucket": "medien-bewerten.firebasestorage.app",
+            "messagingSenderId": "494393371345",
+            "appId": "1:494393371345:web:076bdefc2b0601fc7e33f0"
+};
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    const state = {
+        tabs: [],
+        categories: [],
+        standardCriteria: [],
+        movies: [],
+        currentTabId: null,
+        editingMovieId: null,
+        sortOption: localStorage.getItem('movieSortOption') || 'newestAdded',
+        searchQuery: '',
+        movieForm: {
+            title: '',
+            imageData: null,
+            watchedDate: null,
+            tabID: null,
+            selectedTemplateIds: [],
+            selectedCategoryId: null,
+            criteria: [],
+            seasonMode: false,
+            seasons: [],
+            activeSeasonIndex: 0
+        }
+    };
+
+    const allowedSorts = new Set(['newestAdded', 'oldestAdded', 'bestRating', 'worstRating', 'alphaAZ', 'alphaZA']);
+    if (!allowedSorts.has(state.sortOption)) state.sortOption = 'newestAdded';
+
+    const DOM = {
+        tabBar: document.getElementById('tabBar'),
+        movieList: document.getElementById('movieList'),
+        mainMenuBtn: document.getElementById('mainMenuBtn'),
+        settingsModal: document.getElementById('settingsModal'),
+        closeSettingsBtn: document.getElementById('closeSettingsModalBtn'),
+        toggleThemeBtn: document.getElementById('toggleThemeMenuBtn'),
+        manageStandardCriteriaBtn: document.getElementById('manageStandardCriteriaBtn'),
+        seasonLabelModeSelect: document.getElementById('seasonLabelModeSelect'),
+        autoDeleteSelect: document.getElementById('autoDeleteSelect'),
+        movieModal: document.getElementById('movieModal'),
+        simpleModal: document.getElementById('simpleModal'),
+        sortModal: document.getElementById('sortModal'),
+        sortModalBody: document.getElementById('sortModalBody'),
+        sortMoviesBtn: document.getElementById('sortMoviesBtn'),
+        searchMoviesBtn: document.getElementById('searchMoviesBtn'),
+        searchBar: document.getElementById('searchBar'),
+        searchInput: document.getElementById('searchInput'),
+        closeSearchBtn: document.getElementById('closeSearchBtn'),
+        seasonModeSection: document.getElementById('seasonModeSection'),
+        seasonModeToggle: document.getElementById('seasonModeToggle'),
+        seasonControls: document.getElementById('seasonControls'),
+        seasonTabBar: document.getElementById('seasonTabBar'),
+        addSeasonBtn: document.getElementById('addSeasonBtn'),
+        customDeleteModal: document.getElementById('customDeleteModal'),
+        actionMenuModal: document.getElementById('actionMenuModal')
+    };
+
+    const trashIconSvg = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 1 1 0z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
+
+    let dragEl = null;
+    let activeDeleteAction = null;
+    let activeEditCallback = null;
+    let activeDeleteCallback = null;
+    let seedTabsRequested = false;
+    let seedStandardCriteriaRequested = false;
+
     function uid() {
         return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
+
     function escapeHtml(value) {
-        return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#39;");
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
+
+    function normalizeKey(value) {
+        return String(value ?? '').trim().toLocaleLowerCase('de');
+    }
+
+    function uniquePreserveOrder(values) {
+        const out = [];
+        const seen = new Set();
+        for (const value of values || []) {
+            const key = String(value ?? '').trim();
+            if (!key) continue;
+            const norm = normalizeKey(key);
+            if (seen.has(norm)) continue;
+            seen.add(norm);
+            out.push(key);
+        }
+        return out;
+    }
+
+    function lockScroll() {
+        document.body.style.overflow = 'hidden';
+    }
+
+    function unlockScroll() {
+        if (document.querySelectorAll('.modal-overlay.active').length === 0) {
+            document.body.style.overflow = '';
+        }
+    }
+
+    function isEditableTarget(target) {
+        return target instanceof Element && !!target.closest('input, textarea, select, [contenteditable="true"]');
+    }
+
+    document.addEventListener('contextmenu', (e) => {
+        if (!isEditableTarget(e.target)) e.preventDefault();
+    }, true);
+
+    document.addEventListener('selectstart', (e) => {
+        if (!isEditableTarget(e.target)) e.preventDefault();
+    }, true);
+
+    document.body.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    DOM.autoDeleteSelect.value = localStorage.getItem('autoDeleteSetting') || '6';
+    DOM.seasonLabelModeSelect.value = localStorage.getItem('seasonLabelMode') || 'full';
+
     function getTabById(tabId) {
         return state.tabs.find(t => t.id === tabId) || null;
     }
+
     function isSeriesTab(tabId = state.currentTabId) {
         const tab = getTabById(tabId);
-        return !!tab && (tab.kind === "series" || tab.name === "Serien");
+        return !!tab && (tab.kind === 'series' || tab.name === 'Serien');
     }
-    function getTemplateCriteriaNames(categoryId = state.movieForm.selectedCategoryId) {
-        const cat = state.categories.find(c => c.id === categoryId) || state.categories[0] || null;
+
+    function getSeasonLabelMode() {
+        return localStorage.getItem('seasonLabelMode') || 'full';
+    }
+
+    function getSeasonTabLabel(index) {
+        return getSeasonLabelMode() === 'short' ? `S${index + 1}` : `Staffel ${index + 1}`;
+    }
+
+    function getTemplateCriteriaNames(categoryOrIds = state.movieForm.selectedTemplateIds || []) {
+        if (Array.isArray(categoryOrIds)) {
+            return categoryOrIds.flatMap(id => {
+                const cat = state.categories.find(c => c.id === id);
+                return Array.isArray(cat?.criteriaNames) ? cat.criteriaNames : [];
+            });
+        }
+        const cat = state.categories.find(c => c.id === categoryOrIds) || null;
         return Array.isArray(cat?.criteriaNames) ? cat.criteriaNames : [];
     }
-    function makeCriteria(templateNames, existingCriteria = []) {
-        return (templateNames || []).map(name => {
-            const found = existingCriteria.find(c => c.name === name);
-            return {
-                id: found?.id || uid(),
+
+    function makeCriteria(templateNames = [], existingCriteria = []) {
+        const sources = [
+            ...(state.standardCriteria || []).map(c => c.name),
+            ...(templateNames || []),
+            ...(existingCriteria || []).map(c => c.name)
+        ];
+
+        const result = [];
+        const seen = new Set();
+
+        for (const rawName of sources) {
+            const name = String(rawName ?? '').trim();
+            const key = normalizeKey(name);
+            if (!name || seen.has(key)) continue;
+            seen.add(key);
+            const existing = (existingCriteria || []).find(c => normalizeKey(c.name) === key);
+            result.push({
+                id: existing?.id || uid(),
                 name,
-                stars: Number(found?.stars || 0),
-                notes: found?.notes || ""
-            };
-        });
+                stars: Number(existing?.stars || 0),
+                notes: existing?.notes || ''
+            });
+        }
+
+        return result;
     }
-    function createSeason(categoryId, existingCriteria = []) {
+
+    function createSeason(arg1 = [], arg2 = []) {
+        const existingCriteria = Array.isArray(arg1) ? arg1 : Array.isArray(arg2) ? arg2 : [];
+        const selectedTemplateIds = Array.isArray(arg1)
+            ? arg2
+            : ((state.movieForm.selectedTemplateIds && state.movieForm.selectedTemplateIds.length > 0)
+                ? state.movieForm.selectedTemplateIds
+                : (arg1 ? [arg1] : []));
         return {
             id: uid(),
-            criteria: makeCriteria(getTemplateCriteriaNames(categoryId), existingCriteria)
+            criteria: makeCriteria(getTemplateCriteriaNames(selectedTemplateIds), existingCriteria)
         };
     }
+
+    function getMovieSortDate(movie) {
+        const raw = movie.dateAdded || movie.watchedDate || '';
+        const t = raw ? new Date(raw).getTime() : 0;
+        return Number.isNaN(t) ? 0 : t;
+    }
+
     function calculateCriteriaAverage(criteria = []) {
         const rated = (criteria || []).filter(c => Number(c.stars || 0) > 0);
         if (rated.length === 0) return 0;
         return rated.reduce((sum, c) => sum + Number(c.stars || 0), 0) / rated.length;
     }
-    function getMovieSortDate(movie) {
-        const raw = movie.dateAdded || movie.watchedDate || "";
-        const t = raw ? new Date(raw).getTime() : 0;
-        return Number.isNaN(t) ? 0 : t;
-    }
+
     function getMovieRatingValue(movie) {
         const seasons = Array.isArray(movie.seasons) ? movie.seasons : [];
         if (seasons.length > 0) {
@@ -985,34 +1144,7 @@
         }
         return calculateCriteriaAverage(movie.criteria || []);
     }
-    function compareMovies(a, b) {
-        const option = state.sortOption || 'newestAdded';
-        const titleA = (a.title || "").toLocaleLowerCase('de');
-        const titleB = (b.title || "").toLocaleLowerCase('de');
-        switch (option) {
-            case 'oldestAdded': {
-                const dateDiff = getMovieSortDate(a) - getMovieSortDate(b);
-                return dateDiff !== 0 ? dateDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
-            }
-            case 'bestRating': {
-                const ratingDiff = getMovieRatingValue(b) - getMovieRatingValue(a);
-                return ratingDiff !== 0 ? ratingDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
-            }
-            case 'worstRating': {
-                const ratingDiff = getMovieRatingValue(a) - getMovieRatingValue(b);
-                return ratingDiff !== 0 ? ratingDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
-            }
-            case 'alphaAZ':
-                return titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
-            case 'alphaZA':
-                return titleB.localeCompare(titleA, 'de', { sensitivity: 'base' });
-            case 'newestAdded':
-            default: {
-                const dateDiff = getMovieSortDate(b) - getMovieSortDate(a);
-                return dateDiff !== 0 ? dateDiff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
-            }
-        }
-    }
+
     const SORT_OPTIONS = [
         {
             section: 'Neu hinzugefügt',
@@ -1036,6 +1168,7 @@
             ]
         }
     ];
+
     function getSortLabel(option) {
         for (const group of SORT_OPTIONS) {
             for (const item of group.options) {
@@ -1044,302 +1177,117 @@
         }
         return 'Neueste zuerst';
     }
-    function getSeasonLabelMode() {
-        return localStorage.getItem('seasonLabelMode') || 'full';
-    }
-    function getSeasonTabLabel(index) {
-        return getSeasonLabelMode() === 'short'
-            ? `S${index + 1}`
-            : `Staffel ${index + 1}`;
-    }
-    let state = {
-        tabs: [],
-        categories: [],
-        movies: [],
-        currentTabId: null,
-        editingMovieId: null,
-        sortOption: localStorage.getItem('movieSortOption') || 'newestAdded',
-        searchQuery: '',
-        movieForm: {
-            title: "",
-            imageData: null,
-            watchedDate: null,
-            tabID: null,
-            selectedCategoryId: null,
-            criteria: [],
-            seasonMode: false,
-            seasons: [],
-            activeSeasonIndex: 0
-        }
-    };
-    if (!SORT_OPTIONS.flatMap(g => g.options.map(o => o.value)).includes(state.sortOption)) {
-        state.sortOption = 'newestAdded';
-    }
-    const trashIconSvg = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 1 1 0z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
-    let dragEl = null;
-    const DOM = {
-        tabBar: document.getElementById('tabBar'),
-        movieList: document.getElementById('movieList'),
-        mainMenuBtn: document.getElementById('mainMenuBtn'),
-        settingsModal: document.getElementById('settingsModal'),
-        closeSettingsBtn: document.getElementById('closeSettingsModalBtn'),
-        toggleThemeBtn: document.getElementById('toggleThemeMenuBtn'),
-        seasonLabelModeSelect: document.getElementById('seasonLabelModeSelect'),
-        autoDeleteSelect: document.getElementById('autoDeleteSelect'),
-        movieModal: document.getElementById('movieModal'),
-        simpleModal: document.getElementById('simpleModal'),
-        sortModal: document.getElementById('sortModal'),
-        sortModalBody: document.getElementById('sortModalBody'),
-        sortMoviesBtn: document.getElementById('sortMoviesBtn'),
-        searchMoviesBtn: document.getElementById('searchMoviesBtn'),
-        searchBar: document.getElementById('searchBar'),
-        searchInput: document.getElementById('searchInput'),
-        closeSearchBtn: document.getElementById('closeSearchBtn'),
-        seasonModeSection: document.getElementById('seasonModeSection'),
-        seasonModeToggle: document.getElementById('seasonModeToggle'),
-        seasonControls: document.getElementById('seasonControls'),
-        seasonTabBar: document.getElementById('seasonTabBar'),
-        addSeasonBtn: document.getElementById('addSeasonBtn')
-    };
-    function isEditableTarget(target) {
-        return target instanceof Element && !!target.closest('input, textarea, select, [contenteditable="true"]');
-    }
-    document.addEventListener('contextmenu', (e) => {
-        if (!isEditableTarget(e.target)) {
-            e.preventDefault();
-        }
-    }, true);
-    document.addEventListener('selectstart', (e) => {
-        if (!isEditableTarget(e.target)) {
-            e.preventDefault();
-        }
-    }, true);
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.body.setAttribute('data-theme', savedTheme);
-    const savedAutoDelete = localStorage.getItem('autoDeleteSetting') || '6';
-    DOM.autoDeleteSelect.value = savedAutoDelete;
-    const savedSeasonLabelMode = getSeasonLabelMode();
-    DOM.seasonLabelModeSelect.value = savedSeasonLabelMode;
-    function updateSortButtonLabel() {
-        DOM.sortMoviesBtn.title = `Sortierung: ${getSortLabel(state.sortOption)}`;
-    }
-    updateSortButtonLabel();
-    function lockScroll() { document.body.style.overflow = 'hidden'; }
-    function unlockScroll() {
-        if (document.querySelectorAll('.modal-overlay.active').length === 0) {
-            document.body.style.overflow = '';
-        }
-    }
-    DOM.mainMenuBtn.onclick = () => {
-        lockScroll();
-        DOM.settingsModal.classList.add('active');
-    };
-    DOM.closeSettingsBtn.onclick = () => {
-        DOM.settingsModal.classList.remove('active');
-        unlockScroll();
-    };
-    DOM.toggleThemeBtn.onclick = () => {
-        const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        document.body.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-    };
-    DOM.seasonLabelModeSelect.onchange = (e) => {
-        const val = e.target.value === 'short' ? 'short' : 'full';
-        localStorage.setItem('seasonLabelMode', val);
-        if (DOM.movieModal.classList.contains('active') && state.movieForm.seasonMode) {
-            renderSeasonTabs();
-        }
-    };
-    DOM.autoDeleteSelect.onchange = (e) => {
-        const val = e.target.value;
-        localStorage.setItem('autoDeleteSetting', val);
-        runAutoDeleteCleanup(state.movies);
-    };
-    DOM.sortMoviesBtn.onclick = () => {
-        renderSortModal();
-        lockScroll();
-        DOM.sortModal.classList.add('active');
-    };
-    DOM.searchMoviesBtn.onclick = () => {
-        const isOpen = DOM.searchBar.classList.contains('active');
-        if (isOpen) {
-            closeSearch();
-            return;
-        }
-        DOM.searchBar.classList.add('active');
-        DOM.searchInput.value = state.searchQuery;
-        setTimeout(() => DOM.searchInput.focus(), 0);
-    };
-    DOM.closeSearchBtn.onclick = () => {
-        closeSearch();
-    };
-    DOM.searchInput.addEventListener('input', (e) => {
-        state.searchQuery = e.target.value || '';
-        renderMovies();
-    });
-    DOM.searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeSearch();
-        }
-    });
-    function closeSearch() {
-        state.searchQuery = '';
-        DOM.searchInput.value = '';
-        DOM.searchBar.classList.remove('active');
-        renderMovies();
-        DOM.searchMoviesBtn.focus?.();
-    }
-    DOM.sortModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-    DOM.sortModal.addEventListener('click', (e) => {
-        if (e.target === DOM.sortModal) {
-            DOM.sortModal.classList.remove('active');
-            unlockScroll();
-        }
-    });
-    document.getElementById('cancelSortModalBtn').onclick = () => {
-        DOM.sortModal.classList.remove('active');
-        unlockScroll();
-    };
-    function renderSortModal() {
-        const active = state.sortOption || 'newestAdded';
-        DOM.sortModalBody.innerHTML = SORT_OPTIONS.map(group => `
-            <div class="sort-group">
-                <div class="sort-section-title">${escapeHtml(group.section)}</div>
-                ${group.options.map(opt => `
-                    <button type="button" class="action-menu-btn sort-option-btn ${active === opt.value ? 'active' : ''}" data-sort="${opt.value}">
-                        ${escapeHtml(opt.label)}
-                    </button>
-                `).join('')}
-            </div>
-        `).join('');
-        DOM.sortModalBody.querySelectorAll('[data-sort]').forEach(btn => {
-            btn.onclick = () => {
-                state.sortOption = btn.getAttribute('data-sort');
-                localStorage.setItem('movieSortOption', state.sortOption);
-                updateSortButtonLabel();
-                renderMovies();
-                DOM.sortModal.classList.remove('active');
-                unlockScroll();
-            };
-        });
-    }
-    async function runAutoDeleteCleanup(movies) {
-        const setting = localStorage.getItem('autoDeleteSetting') || '6';
-        if (setting === 'never' || !movies || movies.length === 0) return;
-        const months = parseInt(setting, 10);
-        if (isNaN(months)) return;
-        const cutoffDate = new Date();
-        cutoffDate.setMonth(cutoffDate.getMonth() - months);
-        for (const movie of movies) {
-            if (movie.imageData) {
-                const dateString = movie.watchedDate || movie.dateAdded;
-                if (!dateString) continue;
-                const movieDate = new Date(dateString);
-                if (movieDate < cutoffDate) {
-                    try {
-                        await updateDoc(doc(db, "movies", movie.id), { imageData: null });
-                        console.log(`Poster für "${movie.title}" aufgeräumt (älter als ${months} Monate).`);
-                    } catch (e) {
-                        console.error(`Fehler beim automatischen Löschen des Bildes von ${movie.title}:`, e);
-                    }
-                }
+
+    function compareMovies(a, b) {
+        const option = state.sortOption || 'newestAdded';
+        const titleA = (a.title || '').toLocaleLowerCase('de');
+        const titleB = (b.title || '').toLocaleLowerCase('de');
+
+        switch (option) {
+            case 'oldestAdded': {
+                const diff = getMovieSortDate(a) - getMovieSortDate(b);
+                return diff !== 0 ? diff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+            }
+            case 'bestRating': {
+                const diff = getMovieRatingValue(b) - getMovieRatingValue(a);
+                return diff !== 0 ? diff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+            }
+            case 'worstRating': {
+                const diff = getMovieRatingValue(a) - getMovieRatingValue(b);
+                return diff !== 0 ? diff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+            }
+            case 'alphaAZ':
+                return titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
+            case 'alphaZA':
+                return titleB.localeCompare(titleA, 'de', { sensitivity: 'base' });
+            case 'newestAdded':
+            default: {
+                const diff = getMovieSortDate(b) - getMovieSortDate(a);
+                return diff !== 0 ? diff : titleA.localeCompare(titleB, 'de', { sensitivity: 'base' });
             }
         }
     }
-    let activeDeleteAction = null;
-    const deleteModal = document.getElementById('customDeleteModal');
-    const deleteModalTitle = document.getElementById('deleteModalTitle');
-    const deleteModalText = document.getElementById('deleteModalText');
-    const deleteModalConfirm = document.getElementById('deleteModalConfirm');
-    deleteModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-    function openConfirmModal({ title, message, confirmText = 'Löschen', onConfirm }) {
-        activeDeleteAction = onConfirm;
-        deleteModalTitle.textContent = title;
-        deleteModalText.innerHTML = message;
-        deleteModalConfirm.textContent = confirmText;
-        deleteModalConfirm.style.background = 'var(--danger-color)';
-        deleteModalConfirm.style.color = 'white';
-        deleteModal.classList.add('active');
-        lockScroll();
+
+    function updateSortButtonTitle() {
+        DOM.sortMoviesBtn.title = `Sortierung: ${getSortLabel(state.sortOption)}`;
     }
-    function openDeleteModal(objectName, onConfirmCallback) {
-        openConfirmModal({
-            title: 'Wirklich löschen?',
-            message: `Möchtest du <b>"${escapeHtml(objectName)}"</b> wirklich unwiderruflich löschen?`,
-            confirmText: 'Löschen',
-            onConfirm: onConfirmCallback
-        });
+
+    updateSortButtonTitle();
+
+    function getSelectedTemplateIds() {
+        const validIds = (state.movieForm.selectedTemplateIds || []).filter(id => state.categories.some(c => c.id === id));
+        state.movieForm.selectedTemplateIds = uniquePreserveOrder(validIds);
+        state.movieForm.selectedCategoryId = state.movieForm.selectedTemplateIds[0] || null;
+        return state.movieForm.selectedTemplateIds;
     }
-    document.getElementById('deleteModalCancel').onclick = () => {
-        deleteModal.classList.remove('active');
-        activeDeleteAction = null;
-        unlockScroll();
-    };
-    deleteModalConfirm.onclick = () => {
-        if (activeDeleteAction) activeDeleteAction();
-        deleteModal.classList.remove('active');
-        activeDeleteAction = null;
-        unlockScroll();
-    };
-    let activeEditCallback = null;
-    let activeDeleteCallback = null;
-    const actionMenuModal = document.getElementById('actionMenuModal');
-    actionMenuModal.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-    function openActionMenu(onEdit, onDelete, options = {}) {
-        activeEditCallback = onEdit || null;
-        activeDeleteCallback = onDelete || null;
-        const editBtn = document.getElementById('actionMenuEditBtn');
-        const deleteBtn = document.getElementById('actionMenuDeleteBtn');
-        if (options.hideEdit) {
-            editBtn.style.display = 'none';
+
+    function rebuildCurrentFormCriteria() {
+        const selectedIds = getSelectedTemplateIds();
+        if (state.movieForm.seasonMode) {
+            if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
+                state.movieForm.seasons = [createSeason(state.movieForm.criteria || [], selectedIds)];
+                state.movieForm.activeSeasonIndex = 0;
+            }
+            state.movieForm.seasons = state.movieForm.seasons.map(season => ({
+                ...season,
+                criteria: makeCriteria(getTemplateCriteriaNames(selectedIds), season.criteria || [])
+            }));
+            state.movieForm.activeSeasonIndex = Math.max(0, Math.min(state.movieForm.activeSeasonIndex || 0, state.movieForm.seasons.length - 1));
+            state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
         } else {
-            editBtn.style.display = 'flex';
+            state.movieForm.criteria = makeCriteria(getTemplateCriteriaNames(selectedIds), state.movieForm.criteria || []);
         }
-        if (options.hideDelete) {
-            deleteBtn.style.display = 'none';
-        } else {
-            deleteBtn.style.display = 'flex';
-        }
-        actionMenuModal.classList.add('active');
-        lockScroll();
     }
-    document.getElementById('actionMenuEditBtn').onclick = () => {
-        actionMenuModal.classList.remove('active');
-        if (activeEditCallback) activeEditCallback();
-    };
-    document.getElementById('actionMenuDeleteBtn').onclick = () => {
-        actionMenuModal.classList.remove('active');
-        if (activeDeleteCallback) activeDeleteCallback();
-    };
-    document.getElementById('actionMenuCancelBtn').onclick = () => {
-        actionMenuModal.classList.remove('active');
-        unlockScroll();
-    };
+
+    function refreshOpenMovieFormFromSources() {
+        if (!DOM.movieModal.classList.contains('active')) return;
+        rebuildCurrentFormCriteria();
+        renderEditorCategories();
+        renderSeasonTabs();
+        renderEditorCriteria();
+    }
+
+    function applyTemplateSelection(nextIds) {
+        state.movieForm.selectedTemplateIds = uniquePreserveOrder((nextIds || []).filter(id => state.categories.some(c => c.id === id)));
+        state.movieForm.selectedCategoryId = state.movieForm.selectedTemplateIds[0] || null;
+        rebuildCurrentFormCriteria();
+        renderEditorCategories();
+        renderSeasonTabs();
+        renderEditorCriteria();
+        validateMovieForm();
+    }
+
     function setupLongPress(element, onEdit, onDelete, onClick, config = {}) {
         let pressTimer = null;
         let longPressTriggered = false;
         let startX = 0, startY = 0;
+
         const clearTimer = () => {
             if (pressTimer) {
                 clearTimeout(pressTimer);
                 pressTimer = null;
             }
         };
+
         const onStart = (e) => {
             if (
-                document.getElementById('actionMenuModal').classList.contains('active') ||
-                document.getElementById('customDeleteModal').classList.contains('active') ||
-                document.getElementById('simpleModal').classList.contains('active') ||
-                document.getElementById('sortModal').classList.contains('active') ||
-                document.getElementById('settingsModal').classList.contains('active')
+                DOM.actionMenuModal.classList.contains('active') ||
+                DOM.customDeleteModal.classList.contains('active') ||
+                DOM.simpleModal.classList.contains('active') ||
+                DOM.sortModal.classList.contains('active') ||
+                DOM.settingsModal.classList.contains('active')
             ) {
                 return;
             }
+            if (isEditableTarget(e.target)) return;
+
             clearTimer();
             longPressTriggered = false;
+
             const touch = e.touches ? e.touches[0] : e;
             startX = touch.clientX || 0;
             startY = touch.clientY || 0;
+
             pressTimer = setTimeout(() => {
                 longPressTriggered = true;
                 if (navigator.vibrate) navigator.vibrate(50);
@@ -1350,16 +1298,17 @@
                 }
             }, 500);
         };
+
         const onMove = (e) => {
             if (!pressTimer) return;
             const touch = e.touches ? e.touches[0] : e;
             const currentX = touch.clientX || 0;
             const currentY = touch.clientY || 0;
-            if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) {
-                clearTimer();
-            }
+            if (Math.abs(currentX - startX) > 5 || Math.abs(currentY - startY) > 5) clearTimer();
         };
-        const onEnd = () => { clearTimer(); };
+
+        const onEnd = () => clearTimer();
+
         element.addEventListener('touchstart', onStart, { passive: true });
         element.addEventListener('touchmove', onMove, { passive: true });
         element.addEventListener('touchend', onEnd);
@@ -1368,11 +1317,13 @@
         element.addEventListener('mousemove', onMove);
         element.addEventListener('mouseup', onEnd);
         element.addEventListener('mouseleave', onEnd);
+
         element.addEventListener('dragstart', () => {
             clearTimer();
             longPressTriggered = false;
         });
-        element.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+        element.addEventListener('contextmenu', (e) => e.preventDefault());
+
         if (onClick) {
             element.addEventListener('click', (e) => {
                 if (longPressTriggered) {
@@ -1384,74 +1335,111 @@
             });
         }
     }
-    onSnapshot(
-        query(collection(db, "tabs"), orderBy("orderIndex")),
-        (snapshot) => {
-            state.tabs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            if (state.tabs.length === 0) setupDefaults();
-            if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
-            renderTabs();
-            renderMovies();
-        },
-        (error) => { console.error(error); }
-    );
-    onSnapshot(
-        query(collection(db, "categories"), orderBy("orderIndex")),
-        (snapshot) => {
-            state.categories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            if (state.movieForm.tabID) {
-                renderEditorCategories();
-                if (state.movieForm.seasonMode) renderSeasonTabs();
-            }
-        },
-        (error) => { console.error(error); }
-    );
-    onSnapshot(
-        query(collection(db, "movies"), orderBy("dateAdded", "desc")),
-        (snapshot) => {
-            state.movies = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            renderMovies();
-            runAutoDeleteCleanup(state.movies);
-        },
-        (error) => { console.error(error); }
-    );
-    async function setupDefaults() {
-        try {
-            await addDoc(collection(db, "tabs"), { name: "Filme", orderIndex: 0 });
-            await addDoc(collection(db, "tabs"), { name: "Serien", orderIndex: 1, kind: "series" });
-            await addDoc(collection(db, "categories"), {
-                name: "Standard",
-                criteriaNames: ["Spannung", "Story", "Effekte"],
-                orderIndex: 0
-            });
-        } catch (e) {}
+
+    function openConfirmModal({ title, message, confirmText = 'Löschen', onConfirm }) {
+        activeDeleteAction = onConfirm;
+        document.getElementById('deleteModalTitle').textContent = title;
+        document.getElementById('deleteModalText').innerHTML = message;
+        document.getElementById('deleteModalConfirm').textContent = confirmText;
+        DOM.customDeleteModal.classList.add('active');
+        lockScroll();
     }
+
+    function openDeleteModal(objectName, onConfirmCallback) {
+        openConfirmModal({
+            title: 'Wirklich löschen?',
+            message: `Möchtest du <b>"${escapeHtml(objectName)}"</b> wirklich unwiderruflich löschen?`,
+            confirmText: 'Löschen',
+            onConfirm: onConfirmCallback
+        });
+    }
+
+    function openActionMenu(onEdit, onDelete, options = {}) {
+        activeEditCallback = onEdit || null;
+        activeDeleteCallback = onDelete || null;
+        document.getElementById('actionMenuEditBtn').style.display = options.hideEdit ? 'none' : 'flex';
+        document.getElementById('actionMenuDeleteBtn').style.display = options.hideDelete ? 'none' : 'flex';
+        DOM.actionMenuModal.classList.add('active');
+        lockScroll();
+    }
+
+    function renderSortModal() {
+        const active = state.sortOption || 'newestAdded';
+        DOM.sortModalBody.innerHTML = SORT_OPTIONS.map(group => `
+            <div class="sort-group">
+                <div class="sort-section-title">${escapeHtml(group.section)}</div>
+                ${group.options.map(opt => `
+                    <button type="button" class="action-menu-btn ${active === opt.value ? 'active' : ''}" data-sort="${opt.value}">
+                        ${escapeHtml(opt.label)}
+                    </button>
+                `).join('')}
+            </div>
+        `).join('');
+
+        DOM.sortModalBody.querySelectorAll('[data-sort]').forEach(btn => {
+            btn.onclick = () => {
+                state.sortOption = btn.getAttribute('data-sort');
+                localStorage.setItem('movieSortOption', state.sortOption);
+                updateSortButtonTitle();
+                renderMovies();
+                DOM.sortModal.classList.remove('active');
+                unlockScroll();
+            };
+        });
+    }
+
+    async function runAutoDeleteCleanup(movies) {
+        const setting = localStorage.getItem('autoDeleteSetting') || '6';
+        if (setting === 'never' || !movies || movies.length === 0) return;
+        const months = parseInt(setting, 10);
+        if (isNaN(months)) return;
+
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - months);
+
+        for (const movie of movies) {
+            if (movie.imageData) {
+                const dateString = movie.watchedDate || movie.dateAdded;
+                if (!dateString) continue;
+                const movieDate = new Date(dateString);
+                if (movieDate < cutoffDate) {
+                    try {
+                        await updateDoc(doc(db, 'movies', movie.id), { imageData: null });
+                    } catch (e) {
+                        console.error(`Fehler beim automatischen Löschen des Bildes von ${movie.title}:`, e);
+                    }
+                }
+            }
+        }
+    }
+
     function renderTabs() {
         DOM.tabBar.innerHTML = '';
-        state.tabs.forEach((tab) => {
+
+        state.tabs.forEach(tab => {
             const el = document.createElement('div');
             el.className = `tab-item no-select ${state.currentTabId === tab.id ? 'active' : ''}`;
-            el.innerText = tab.name;
-            el.setAttribute('data-id', tab.id);
+            el.textContent = tab.name;
+            el.dataset.id = tab.id;
+
             setupLongPress(
                 el,
-                () => { openSimpleModal('EditTab', tab); },
-                () => {
-                    openDeleteModal(tab.name, () => {
-                        deleteDoc(doc(db, "tabs", tab.id));
-                        if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id;
-                    });
-                },
+                () => openSimpleModal('EditTab', tab),
+                () => openDeleteModal(tab.name, async () => {
+                    await deleteDoc(doc(db, 'tabs', tab.id));
+                    if (state.currentTabId === tab.id) state.currentTabId = state.tabs[0]?.id || null;
+                }),
                 () => {
                     state.currentTabId = tab.id;
                     renderTabs();
                     renderMovies();
                 }
             );
+
             el.draggable = true;
             el.ondragstart = (e) => {
                 dragEl = el;
-                dragEl.classList.add('is-dragging');
+                el.classList.add('is-dragging');
                 e.dataTransfer.effectAllowed = 'move';
             };
             el.ondragover = (e) => {
@@ -1459,56 +1447,54 @@
                 if (!dragEl || dragEl === el) return;
                 const rect = el.getBoundingClientRect();
                 const isAfter = (e.clientX - rect.left) > (rect.width / 2);
-                if (isAfter) {
-                    DOM.tabBar.insertBefore(dragEl, el.nextSibling);
-                } else {
-                    DOM.tabBar.insertBefore(dragEl, el);
-                }
+                if (isAfter) DOM.tabBar.insertBefore(dragEl, el.nextSibling);
+                else DOM.tabBar.insertBefore(dragEl, el);
             };
-            el.ondragend = () => {
+            el.ondragend = async () => {
                 if (dragEl) dragEl.classList.remove('is-dragging');
                 dragEl = null;
-                const tabElements = Array.from(DOM.tabBar.querySelectorAll('.tab-item:not(.add-tab-btn)'));
-                tabElements.forEach((tabEl, index) => {
-                    const tabId = tabEl.getAttribute('data-id');
-                    if (tabId) {
-                        updateDoc(doc(db, "tabs", tabId), { orderIndex: index });
-                    }
-                });
+                const tabEls = Array.from(DOM.tabBar.querySelectorAll('.tab-item[data-id]'));
+                for (let i = 0; i < tabEls.length; i++) {
+                    const id = tabEls[i].dataset.id;
+                    await updateDoc(doc(db, 'tabs', id), { orderIndex: i });
+                }
             };
+
             DOM.tabBar.appendChild(el);
         });
+
         const addBtn = document.createElement('div');
         addBtn.className = 'tab-item add-tab-btn no-select';
-        addBtn.innerText = '⊕';
+        addBtn.textContent = '⊕';
         addBtn.onclick = () => openSimpleModal('Tab', null);
         DOM.tabBar.appendChild(addBtn);
     }
+
     function renderMovies() {
         DOM.movieList.innerHTML = '';
         const search = (state.searchQuery || '').trim().toLowerCase();
-        let filtered = [...state.movies].filter(m => m.tabID === state.currentTabId);
-        if (search.length > 0) {
-            filtered = filtered.filter(movie => (movie.title || '').toLowerCase().includes(search));
-        }
-        filtered.sort(compareMovies);
+
+        let filtered = state.movies.filter(m => m.tabID === state.currentTabId);
+        if (search) filtered = filtered.filter(movie => (movie.title || '').toLowerCase().includes(search));
+        filtered = filtered.slice().sort(compareMovies);
+
         if (filtered.length === 0) {
             DOM.movieList.innerHTML = `
                 <div class="empty-state">
                     <div style="font-size: 60px; margin-bottom: 20px;">🍿</div>
-                    <h2>Keine Einträge.</h2>
-                    <p>Füge deinen ersten Film hinzu.</p>
+                    <h2>${search ? 'Keine Treffer.' : 'Keine Einträge.'}</h2>
+                    <p>${search ? 'Passe die Suche an oder lösche den Filter.' : 'Füge deinen ersten Film hinzu.'}</p>
                 </div>`;
             return;
         }
+
         filtered.forEach(movie => {
             const avg = getMovieRatingValue(movie).toFixed(1);
             const dateStr = movie.watchedDate
                 ? `Gesehen am ${new Date(movie.watchedDate).toLocaleDateString('de-DE')}`
                 : `Erstellt am ${new Date(movie.dateAdded).toLocaleDateString('de-DE')}`;
-            const imgHtml = movie.imageData
-                ? `<img src="${movie.imageData}" alt="Poster">`
-                : `🎬`;
+            const imgHtml = movie.imageData ? `<img src="${movie.imageData}" alt="Poster">` : `🎬`;
+
             const el = document.createElement('div');
             el.className = 'movie-row no-select';
             el.innerHTML = `
@@ -1519,44 +1505,662 @@
                     <div class="movie-date">${escapeHtml(dateStr)}</div>
                 </div>
             `;
+
             setupLongPress(
                 el,
-                () => { openMovieEditor(movie); },
-                () => {
-                    openDeleteModal(movie.title, () => {
-                        deleteDoc(doc(db, "movies", movie.id));
-                    });
-                },
-                () => { openMovieEditor(movie); }
+                () => openMovieEditor(movie),
+                () => openDeleteModal(movie.title, async () => {
+                    await deleteDoc(doc(db, 'movies', movie.id));
+                }),
+                () => openMovieEditor(movie)
             );
+
             DOM.movieList.appendChild(el);
         });
     }
+
+    function updateSeasonSectionVisibility() {
+        const showSeasonSection = isSeriesTab(state.movieForm.tabID);
+        DOM.seasonModeSection.style.display = showSeasonSection ? 'block' : 'none';
+        if (!showSeasonSection) {
+            DOM.seasonControls.style.display = 'none';
+            DOM.seasonModeToggle.checked = false;
+        } else {
+            DOM.seasonModeToggle.checked = !!state.movieForm.seasonMode;
+            DOM.seasonControls.style.display = state.movieForm.seasonMode ? 'block' : 'none';
+        }
+    }
+
+    function renderSeasonTabs() {
+        DOM.seasonTabBar.innerHTML = '';
+
+        if (!state.movieForm.seasonMode) {
+            DOM.seasonControls.style.display = 'none';
+            return;
+        }
+
+        DOM.seasonControls.style.display = 'block';
+
+        state.movieForm.seasons.forEach((season, index) => {
+            const item = document.createElement('div');
+            item.className = `season-tab-item ${index === state.movieForm.activeSeasonIndex ? 'active' : ''}`;
+            item.dataset.index = String(index);
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'season-tab-button';
+            btn.textContent = getSeasonTabLabel(index);
+            btn.onclick = () => selectSeason(index);
+
+            item.appendChild(btn);
+
+            setupLongPress(
+                item,
+                null,
+                () => deleteSeason(index),
+                () => selectSeason(index),
+                {
+                    hideEdit: true,
+                    hideDelete: false,
+                    onLongPress: () => openActionMenu(null, () => deleteSeason(index), { hideEdit: true, hideDelete: false })
+                }
+            );
+
+            DOM.seasonTabBar.appendChild(item);
+        });
+    }
+
+    function selectSeason(index) {
+        if (!state.movieForm.seasonMode) return;
+        if (index < 0 || index >= state.movieForm.seasons.length) return;
+        state.movieForm.activeSeasonIndex = index;
+        state.movieForm.criteria = state.movieForm.seasons[index].criteria;
+        renderSeasonTabs();
+        renderEditorCriteria();
+    }
+
+    function addSeason() {
+        if (!state.movieForm.seasonMode) return;
+        const newSeason = createSeason([], state.movieForm.selectedTemplateIds || []);
+        state.movieForm.seasons.push(newSeason);
+        state.movieForm.activeSeasonIndex = state.movieForm.seasons.length - 1;
+        state.movieForm.criteria = newSeason.criteria;
+        renderSeasonTabs();
+        renderEditorCriteria();
+    }
+
+    function deleteSeason(index) {
+        if (!state.movieForm.seasonMode) return;
+        openDeleteModal(getSeasonTabLabel(index), () => {
+            state.movieForm.seasons.splice(index, 1);
+            if (state.movieForm.seasons.length === 0) {
+                state.movieForm.seasons.push(createSeason([], state.movieForm.selectedTemplateIds || []));
+            }
+            if (state.movieForm.activeSeasonIndex > index) {
+                state.movieForm.activeSeasonIndex -= 1;
+            } else if (state.movieForm.activeSeasonIndex === index) {
+                state.movieForm.activeSeasonIndex = Math.min(index, state.movieForm.seasons.length - 1);
+            }
+            state.movieForm.activeSeasonIndex = Math.max(0, Math.min(state.movieForm.activeSeasonIndex, state.movieForm.seasons.length - 1));
+            state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
+            renderSeasonTabs();
+            renderEditorCriteria();
+        });
+    }
+
+    function renderEditorCategories() {
+        const list = document.getElementById('categoryList');
+        list.innerHTML = '';
+
+        state.categories.forEach(cat => {
+            const el = document.createElement('div');
+            const active = (state.movieForm.selectedTemplateIds || []).includes(cat.id);
+            el.className = `category-pill no-select ${active ? 'active' : ''}`;
+            el.textContent = cat.name;
+            el.dataset.id = cat.id;
+
+            setupLongPress(
+                el,
+                () => openSimpleModal('EditCategory', cat),
+                () => openDeleteModal(cat.name, async () => {
+                    await deleteDoc(doc(db, 'categories', cat.id));
+                    state.movieForm.selectedTemplateIds = (state.movieForm.selectedTemplateIds || []).filter(id => id !== cat.id);
+                    rebuildCurrentFormCriteria();
+                    renderEditorCategories();
+                    renderSeasonTabs();
+                    renderEditorCriteria();
+                }),
+                () => {
+                    const ids = state.movieForm.selectedTemplateIds || [];
+                    const next = ids.includes(cat.id) ? ids.filter(id => id !== cat.id) : [...ids, cat.id];
+                    applyTemplateSelection(next);
+                }
+            );
+
+            el.draggable = true;
+            el.ondragstart = (e) => {
+                dragEl = el;
+                el.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            };
+            el.ondragover = (e) => {
+                e.preventDefault();
+                if (!dragEl || dragEl === el) return;
+                const rect = el.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                if (e.clientY < centerY || (e.clientY === centerY && e.clientX < centerX)) {
+                    list.insertBefore(dragEl, el);
+                } else {
+                    list.insertBefore(dragEl, el.nextSibling);
+                }
+            };
+            el.ondragend = async () => {
+                if (dragEl) dragEl.classList.remove('is-dragging');
+                dragEl = null;
+                const catElements = Array.from(list.querySelectorAll('.category-pill[data-id]'));
+                for (let i = 0; i < catElements.length; i++) {
+                    const id = catElements[i].dataset.id;
+                    await updateDoc(doc(db, 'categories', id), { orderIndex: i });
+                }
+            };
+
+            list.appendChild(el);
+        });
+    }
+
+    function renderEditorCriteria() {
+        const container = document.getElementById('criteriaContainer');
+        container.innerHTML = '';
+        const criteria = state.movieForm.criteria || [];
+
+        criteria.forEach((crit, index) => {
+            const card = document.createElement('div');
+            card.className = 'criterion-card';
+
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
+            }
+
+            card.innerHTML = `
+                <div class="criterion-header">
+                    <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${escapeHtml(crit.name)}">
+                    <div class="stars">${starsHtml}</div>
+                    <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
+                </div>
+                <textarea class="input-text" placeholder="Notizen...">${escapeHtml(crit.notes)}</textarea>
+            `;
+
+            card.querySelector('input').oninput = (e) => {
+                state.movieForm.criteria[index].name = e.target.value;
+            };
+            card.querySelectorAll('.star').forEach(star => {
+                star.onclick = (e) => {
+                    state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx'), 10);
+                    renderEditorCriteria();
+                };
+            });
+            card.querySelector('textarea').oninput = (e) => {
+                state.movieForm.criteria[index].notes = e.target.value;
+            };
+            card.querySelector('.btn-icon').onclick = () => {
+                const nameToDisplay = state.movieForm.criteria[index].name.trim() || 'Dieses Kriterium';
+                openDeleteModal(nameToDisplay, () => {
+                    state.movieForm.criteria.splice(index, 1);
+                    renderEditorCriteria();
+                });
+            };
+
+            container.appendChild(card);
+        });
+    }
+
+    function validateMovieForm() {
+        saveMovieBtn.disabled = state.movieForm.title.trim().length === 0;
+    }
+
+    function updateSeasonModeVisibilityAfterToggle() {
+        updateSeasonSectionVisibility();
+        renderSeasonTabs();
+        renderEditorCriteria();
+        validateMovieForm();
+    }
+
+    function enableSeasonMode() {
+        state.movieForm.seasonMode = true;
+        if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
+            state.movieForm.seasons = [createSeason(state.movieForm.criteria || [], state.movieForm.selectedTemplateIds || [])];
+        }
+        state.movieForm.activeSeasonIndex = 0;
+        state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+        updateSeasonModeVisibilityAfterToggle();
+    }
+
+    function disableSeasonMode() {
+        state.movieForm.seasonMode = false;
+        state.movieForm.seasons = [];
+        state.movieForm.activeSeasonIndex = 0;
+        state.movieForm.criteria = makeCriteria(getTemplateCriteriaNames(state.movieForm.selectedTemplateIds || []), []);
+        updateSeasonModeVisibilityAfterToggle();
+    }
+
+    function openMovieEditor(movie) {
+        lockScroll();
+        state.editingMovieId = movie ? movie.id : null;
+        document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
+
+        const selectedTemplateIds = uniquePreserveOrder(
+            Array.isArray(movie?.selectedTemplateIds) ? movie.selectedTemplateIds
+            : Array.isArray(movie?.selectedCategoryIds) ? movie.selectedCategoryIds
+            : movie?.selectedCategoryId ? [movie.selectedCategoryId]
+            : []
+        ).filter(id => state.categories.some(c => c.id === id));
+
+        if (movie) {
+            state.movieForm = {
+                title: movie.title || '',
+                imageData: movie.imageData || null,
+                watchedDate: movie.watchedDate || new Date().toISOString().split('T')[0],
+                tabID: movie.tabID || state.currentTabId,
+                selectedTemplateIds: selectedTemplateIds.slice(),
+                selectedCategoryId: selectedTemplateIds[0] || null,
+                criteria: [],
+                seasonMode: false,
+                seasons: [],
+                activeSeasonIndex: 0
+            };
+
+            const existingSeasons = Array.isArray(movie.seasons) ? movie.seasons : [];
+            const inferSeasonMode = isSeriesTab(movie.tabID) && (movie.seasonMode === true || existingSeasons.length > 0);
+
+            if (inferSeasonMode) {
+                state.movieForm.seasonMode = true;
+                state.movieForm.seasons = existingSeasons.length > 0
+                    ? existingSeasons.map(season => ({
+                        id: season.id || uid(),
+                        criteria: makeCriteria(getTemplateCriteriaNames(selectedTemplateIds), Array.isArray(season.criteria) ? season.criteria : [])
+                    }))
+                    : [createSeason(Array.isArray(movie.criteria) ? movie.criteria : [], selectedTemplateIds)];
+                state.movieForm.activeSeasonIndex = 0;
+                state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+            } else {
+                state.movieForm.criteria = makeCriteria(getTemplateCriteriaNames(selectedTemplateIds), Array.isArray(movie.criteria) ? movie.criteria : []);
+            }
+        } else {
+            state.movieForm = {
+                title: '',
+                imageData: null,
+                watchedDate: new Date().toISOString().split('T')[0],
+                tabID: state.currentTabId,
+                selectedTemplateIds: [],
+                selectedCategoryId: null,
+                criteria: makeCriteria([], []),
+                seasonMode: isSeriesTab(state.currentTabId),
+                seasons: [],
+                activeSeasonIndex: 0
+            };
+
+            if (state.movieForm.seasonMode) {
+                state.movieForm.seasons = [createSeason([], [])];
+                state.movieForm.criteria = state.movieForm.seasons[0].criteria;
+            }
+        }
+
+        document.getElementById('movieTitleInput').value = state.movieForm.title;
+        document.getElementById('watchedDateInput').value = state.movieForm.watchedDate || '';
+
+        if (state.movieForm.imageData) {
+            document.getElementById('posterPreview').src = state.movieForm.imageData;
+            document.getElementById('posterPreview').style.display = 'block';
+            document.getElementById('posterPlaceholder').style.display = 'none';
+            document.getElementById('removePosterBtn').style.display = 'flex';
+        } else {
+            document.getElementById('posterPreview').src = '';
+            document.getElementById('posterPreview').style.display = 'none';
+            document.getElementById('posterPlaceholder').style.display = 'flex';
+            document.getElementById('removePosterBtn').style.display = 'none';
+        }
+
+        const delBtn = document.getElementById('deleteMovieBtn');
+        if (movie) {
+            delBtn.style.display = 'block';
+            delBtn.onclick = () => {
+                openDeleteModal(movie.title, async () => {
+                    await deleteDoc(doc(db, 'movies', movie.id));
+                    DOM.movieModal.classList.remove('active');
+                    unlockScroll();
+                });
+            };
+        } else {
+            delBtn.style.display = 'none';
+        }
+
+        updateSeasonSectionVisibility();
+        renderEditorCategories();
+        renderSeasonTabs();
+        renderEditorCriteria();
+        validateMovieForm();
+        DOM.movieModal.classList.add('active');
+    }
+
+    function renderStandardCriteriaManagerBody(container) {
+        container.innerHTML = `
+            <div class="settings-group" id="standardCriteriaList"></div>
+            <button type="button" class="btn-text btn-save" id="addStandardCriterionBtn" style="margin-top: 10px;">+ Standard-Kriterium hinzufügen</button>
+        `;
+
+        const list = document.getElementById('standardCriteriaList');
+
+        const addRow = (crit) => {
+            const row = document.createElement('div');
+            row.className = 'settings-row manager-row no-select';
+            row.draggable = true;
+            row.dataset.dbId = crit.id || '';
+            row.innerHTML = `
+                <input type="text" class="input-text" value="${escapeHtml(crit.name || '')}" placeholder="Standard-Kriterium">
+                <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
+            `;
+
+            const input = row.querySelector('input');
+            row.querySelector('button').onclick = () => {
+                openDeleteModal(input.value.trim() || 'Dieses Kriterium', () => row.remove());
+            };
+
+            setupLongPress(
+                row,
+                null,
+                () => openDeleteModal(input.value.trim() || 'Dieses Kriterium', () => row.remove()),
+                null,
+                {
+                    hideEdit: true,
+                    hideDelete: false,
+                    onLongPress: () => openActionMenu(null, () => row.remove(), { hideEdit: true, hideDelete: false })
+                }
+            );
+
+            row.ondragstart = (e) => {
+                dragEl = row;
+                row.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            };
+            row.ondragover = (e) => {
+                e.preventDefault();
+                if (!dragEl || dragEl === row) return;
+                const rect = row.getBoundingClientRect();
+                const isAfter = (e.clientY - rect.top) > (rect.height / 2);
+                if (isAfter) list.insertBefore(dragEl, row.nextSibling);
+                else list.insertBefore(dragEl, row);
+            };
+            row.ondragend = () => {
+                if (dragEl) row.classList.remove('is-dragging');
+                dragEl = null;
+            };
+
+            list.appendChild(row);
+        };
+
+        state.standardCriteria.forEach(c => addRow(c));
+
+        document.getElementById('addStandardCriterionBtn').onclick = () => {
+            addRow({ id: '', name: '' });
+            const inputs = list.querySelectorAll('input');
+            inputs[inputs.length - 1]?.focus();
+        };
+    }
+
+    async function saveStandardCriteriaManager() {
+        const saveBtn = document.getElementById('saveSimpleModalBtn');
+        const rows = Array.from(document.querySelectorAll('#standardCriteriaList .settings-row'));
+
+        const raw = rows.map(row => ({
+            dbId: row.dataset.dbId || '',
+            name: row.querySelector('input').value.trim()
+        })).filter(item => item.name.length > 0);
+
+        const deduped = [];
+        const seen = new Set();
+        for (const item of raw) {
+            const key = normalizeKey(item.name);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(item);
+        }
+
+        saveBtn.disabled = true;
+        try {
+            const kept = new Set();
+            for (let i = 0; i < deduped.length; i++) {
+                const item = deduped[i];
+                if (item.dbId && state.standardCriteria.some(c => c.id === item.dbId)) {
+                    kept.add(item.dbId);
+                    await updateDoc(doc(db, 'standardCriteria', item.dbId), { name: item.name, orderIndex: i });
+                } else {
+                    const ref = await addDoc(collection(db, 'standardCriteria'), { name: item.name, orderIndex: i });
+                    kept.add(ref.id);
+                }
+            }
+
+            for (const existing of state.standardCriteria) {
+                if (!deduped.some(d => d.dbId === existing.id)) {
+                    await deleteDoc(doc(db, 'standardCriteria', existing.id));
+                }
+            }
+
+            DOM.simpleModal.classList.remove('active');
+            unlockScroll();
+            refreshOpenMovieFormFromSources();
+        } catch (error) {
+            console.error(error);
+            alert('Fehler: ' + error.message);
+        } finally {
+            saveBtn.disabled = false;
+        }
+    }
+
+    function buildCategoryEditorBody(container, nameVal, criteriaArr) {
+        container.innerHTML = `
+            <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${escapeHtml(nameVal)}" style="margin-bottom: 20px;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
+            <div id="newCatCriteriaContainer"></div>
+            <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
+        `;
+
+        const critContainer = document.getElementById('newCatCriteriaContainer');
+
+        const addCritRow = (val) => {
+            const div = document.createElement('div');
+            div.className = 'flex-row';
+            div.style.marginBottom = '10px';
+            div.style.gap = '10px';
+            div.innerHTML = `
+                <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${escapeHtml(val)}">
+                <button type="button" class="btn-icon delete-cat-crit-btn" style="padding: 10px; font-size: 16px;">${trashIconSvg}</button>
+            `;
+
+            div.querySelector('.delete-cat-crit-btn').onclick = () => {
+                const inputVal = div.querySelector('.cat-crit-input').value.trim();
+                openDeleteModal(inputVal || 'Dieses Kriterium', () => div.remove());
+            };
+
+            critContainer.appendChild(div);
+        };
+
+        (criteriaArr || []).forEach(c => addCritRow(c));
+        document.getElementById('addCatCritBtn').onclick = () => addCritRow('');
+    }
+
+    async function saveCategoryData(existingItem, saveBtn) {
+        const name = document.getElementById('catNameInput').value.trim();
+        const inputs = Array.from(document.querySelectorAll('.cat-crit-input'));
+        const criteria = uniquePreserveOrder(inputs.map(inp => inp.value.trim()));
+
+        if (!name || criteria.length === 0) return;
+
+        saveBtn.disabled = true;
+        try {
+            if (existingItem) {
+                await updateDoc(doc(db, 'categories', existingItem.id), { name, criteriaNames: criteria });
+            } else {
+                const ref = await addDoc(collection(db, 'categories'), {
+                    name,
+                    criteriaNames: criteria,
+                    orderIndex: state.categories.length
+                });
+                state.movieForm.selectedTemplateIds = uniquePreserveOrder([...(state.movieForm.selectedTemplateIds || []), ref.id]);
+                state.movieForm.selectedCategoryId = state.movieForm.selectedTemplateIds[0] || null;
+            }
+            DOM.simpleModal.classList.remove('active');
+            unlockScroll();
+            refreshOpenMovieFormFromSources();
+        } catch (error) {
+            alert('Fehler: ' + error.message);
+        } finally {
+            saveBtn.disabled = false;
+        }
+    }
+
+    function openSimpleModal(type, item) {
+        lockScroll();
+        const titleEl = document.getElementById('simpleModalTitle');
+        const bodyEl = document.getElementById('simpleModalBody');
+        const saveBtn = document.getElementById('saveSimpleModalBtn');
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Speichern';
+
+        if (type === 'Tab') {
+            titleEl.innerText = 'Neuer Tab';
+            bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
+            saveBtn.onclick = async () => {
+                const val = document.getElementById('tabNameInput').value.trim();
+                if (!val) return;
+                try {
+                    saveBtn.disabled = true;
+                    await addDoc(collection(db, 'tabs'), { name: val, orderIndex: state.tabs.length });
+                    DOM.simpleModal.classList.remove('active');
+                    unlockScroll();
+                } catch (error) {
+                    alert('Fehler: ' + error.message);
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            };
+        } else if (type === 'EditTab') {
+            titleEl.innerText = 'Tab umbenennen';
+            bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${escapeHtml(item.name)}">`;
+            saveBtn.onclick = async () => {
+                const val = document.getElementById('tabNameInput').value.trim();
+                if (!val) return;
+                try {
+                    saveBtn.disabled = true;
+                    await updateDoc(doc(db, 'tabs', item.id), { name: val });
+                    DOM.simpleModal.classList.remove('active');
+                    unlockScroll();
+                } catch (error) {
+                    alert('Fehler: ' + error.message);
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            };
+        } else if (type === 'Category') {
+            titleEl.innerText = 'Neue Vorlage';
+            buildCategoryEditorBody(bodyEl, '', ['Spannung']);
+            saveBtn.onclick = async () => saveCategoryData(null, saveBtn);
+        } else if (type === 'EditCategory') {
+            titleEl.innerText = 'Vorlage bearbeiten';
+            buildCategoryEditorBody(bodyEl, item.name, item.criteriaNames || []);
+            saveBtn.onclick = async () => saveCategoryData(item, saveBtn);
+        } else if (type === 'StandardCriteriaManager') {
+            titleEl.innerText = 'Standard-Kriterien';
+            renderStandardCriteriaManagerBody(bodyEl);
+            saveBtn.onclick = async () => saveStandardCriteriaManager();
+        }
+
+        DOM.simpleModal.classList.add('active');
+    }
+
+    document.getElementById('cancelSimpleModalBtn').onclick = () => {
+        DOM.simpleModal.classList.remove('active');
+        unlockScroll();
+    };
+
+    function renderStandardCriteriaManager() {
+        renderStandardCriteriaManagerBody(document.getElementById('simpleModalBody'));
+    }
+
+    function setupDefaults() {
+        if (seedTabsRequested) return;
+        seedTabsRequested = true;
+        addDoc(collection(db, 'tabs'), { name: 'Filme', orderIndex: 0 });
+        addDoc(collection(db, 'tabs'), { name: 'Serien', orderIndex: 1, kind: 'series' });
+    }
+
+    function setupDefaultStandardCriteria() {
+        if (seedStandardCriteriaRequested) return;
+        seedStandardCriteriaRequested = true;
+        addDoc(collection(db, 'standardCriteria'), { name: 'Story', orderIndex: 0 });
+        addDoc(collection(db, 'standardCriteria'), { name: 'Schauspiel', orderIndex: 1 });
+        addDoc(collection(db, 'standardCriteria'), { name: 'Musik', orderIndex: 2 });
+    }
+
+    onSnapshot(query(collection(db, 'tabs'), orderBy('orderIndex')), (snapshot) => {
+        state.tabs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (state.tabs.length === 0) setupDefaults();
+        if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
+        renderTabs();
+        renderMovies();
+    }, (error) => console.error(error));
+
+    onSnapshot(query(collection(db, 'categories'), orderBy('orderIndex')), (snapshot) => {
+        state.categories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (DOM.movieModal.classList.contains('active')) refreshOpenMovieFormFromSources();
+    }, (error) => console.error(error));
+
+    onSnapshot(query(collection(db, 'standardCriteria'), orderBy('orderIndex')), (snapshot) => {
+        state.standardCriteria = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (state.standardCriteria.length === 0) setupDefaultStandardCriteria();
+        refreshOpenMovieFormFromSources();
+    }, (error) => console.error(error));
+
+    onSnapshot(query(collection(db, 'movies'), orderBy('dateAdded', 'desc')), (snapshot) => {
+        state.movies = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderMovies();
+        runAutoDeleteCleanup(state.movies);
+    }, (error) => console.error(error));
+
     const titleInput = document.getElementById('movieTitleInput');
-    const saveBtn = document.getElementById('saveMovieBtn');
+    const saveMovieBtn = document.getElementById('saveMovieBtn');
     const posterInput = document.getElementById('posterInput');
     const posterPreview = document.getElementById('posterPreview');
     const dateInput = document.getElementById('watchedDateInput');
+
     titleInput.addEventListener('input', (e) => {
         state.movieForm.title = e.target.value;
         validateMovieForm();
     });
+
     dateInput.addEventListener('change', (e) => {
         state.movieForm.watchedDate = e.target.value;
     });
+
     document.getElementById('clearDateBtn').onclick = () => {
         dateInput.value = '';
         state.movieForm.watchedDate = null;
     };
+
     document.getElementById('addMovieBtnInline').onclick = () => openMovieEditor(null);
+
     document.getElementById('cancelMovieBtn').onclick = () => {
         DOM.movieModal.classList.remove('active');
         unlockScroll();
     };
+
     document.getElementById('addCriterionBtn').onclick = () => {
-        state.movieForm.criteria.push({ id: uid(), name: "", stars: 0, notes: "" });
+        state.movieForm.criteria.push({ id: uid(), name: '', stars: 0, notes: '' });
         renderEditorCriteria();
     };
+
     posterInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -1588,6 +2192,7 @@
         };
         reader.readAsDataURL(file);
     });
+
     document.getElementById('removePosterBtn').onclick = () => {
         state.movieForm.imageData = null;
         posterPreview.src = '';
@@ -1595,575 +2200,183 @@
         document.getElementById('posterPlaceholder').style.display = 'flex';
         document.getElementById('removePosterBtn').style.display = 'none';
     };
-    function buildFormForCategory(categoryId, existingCriteria = []) {
-        return makeCriteria(getTemplateCriteriaNames(categoryId), existingCriteria);
-    }
-    function applyCategoryTemplateToCurrentForm(categoryId, templateNamesOverride = null) {
-        state.movieForm.selectedCategoryId = categoryId;
-        const templateNames = templateNamesOverride || getTemplateCriteriaNames(categoryId);
-        if (state.movieForm.seasonMode) {
-            if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
-                state.movieForm.seasons = [createSeason(categoryId, state.movieForm.criteria || [])];
-                state.movieForm.activeSeasonIndex = 0;
-                state.movieForm.criteria = state.movieForm.seasons[0].criteria;
-                return;
-            }
-            state.movieForm.seasons = state.movieForm.seasons.map(season => ({
-                ...season,
-                criteria: makeCriteria(templateNames, season.criteria || [])
-            }));
-            state.movieForm.activeSeasonIndex = Math.min(
-                state.movieForm.activeSeasonIndex,
-                state.movieForm.seasons.length - 1
-            );
-            state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
-        } else {
-            state.movieForm.criteria = makeCriteria(templateNames, state.movieForm.criteria || []);
-        }
-    }
-    function updateSeasonSectionVisibility() {
-        const showSeasonSection = isSeriesTab(state.movieForm.tabID);
-        DOM.seasonModeSection.style.display = showSeasonSection ? 'block' : 'none';
-        if (!showSeasonSection) {
-            DOM.seasonControls.style.display = 'none';
-            DOM.seasonModeToggle.checked = false;
-            return;
-        }
-        DOM.seasonModeToggle.checked = !!state.movieForm.seasonMode;
-        DOM.seasonControls.style.display = state.movieForm.seasonMode ? 'block' : 'none';
-    }
-    function renderSeasonTabs() {
-        DOM.seasonTabBar.innerHTML = '';
-        if (!state.movieForm.seasonMode) {
-            DOM.seasonControls.style.display = 'none';
-            return;
-        }
-        DOM.seasonControls.style.display = 'block';
-        state.movieForm.seasons.forEach((season, index) => {
-            const item = document.createElement('div');
-            item.className = `season-tab-item ${index === state.movieForm.activeSeasonIndex ? 'active' : ''}`;
-            item.setAttribute('data-index', String(index));
-            const selectBtn = document.createElement('button');
-            selectBtn.type = 'button';
-            selectBtn.className = 'season-tab-button';
-            selectBtn.textContent = getSeasonTabLabel(index);
-            selectBtn.onclick = () => {
-                selectSeason(index);
-            };
-            item.appendChild(selectBtn);
-            setupLongPress(
-                item,
-                null,
-                null,
-                () => selectSeason(index),
-                {
-                    hideEdit: true,
-                    hideDelete: false,
-                    onLongPress: () => {
-                        openActionMenu(
-                            null,
-                            () => deleteSeason(index),
-                            { hideEdit: true, hideDelete: false }
-                        );
-                    }
-                }
-            );
-            DOM.seasonTabBar.appendChild(item);
-        });
-    }
-    function selectSeason(index) {
-        if (!state.movieForm.seasonMode) return;
-        if (index < 0 || index >= state.movieForm.seasons.length) return;
-        state.movieForm.activeSeasonIndex = index;
-        state.movieForm.criteria = state.movieForm.seasons[index].criteria;
-        renderSeasonTabs();
-        renderEditorCriteria();
-    }
-    function addSeason() {
-        if (!state.movieForm.seasonMode) return;
-        const categoryId = state.movieForm.selectedCategoryId || state.categories[0]?.id || null;
-        const newSeason = createSeason(categoryId, []);
-        state.movieForm.seasons.push(newSeason);
-        state.movieForm.activeSeasonIndex = state.movieForm.seasons.length - 1;
-        state.movieForm.criteria = newSeason.criteria;
-        renderSeasonTabs();
-        renderEditorCriteria();
-    }
-    function deleteSeason(index) {
-        if (!state.movieForm.seasonMode) return;
-        openDeleteModal(getSeasonTabLabel(index), () => {
-            state.movieForm.seasons.splice(index, 1);
-            if (state.movieForm.seasons.length === 0) {
-                state.movieForm.seasons.push(createSeason(state.movieForm.selectedCategoryId, []));
-            }
-            if (state.movieForm.activeSeasonIndex > index) {
-                state.movieForm.activeSeasonIndex -= 1;
-            } else if (state.movieForm.activeSeasonIndex === index) {
-                state.movieForm.activeSeasonIndex = Math.min(index, state.movieForm.seasons.length - 1);
-            }
-            state.movieForm.activeSeasonIndex = Math.max(0, Math.min(state.movieForm.activeSeasonIndex, state.movieForm.seasons.length - 1));
-            state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
-            renderSeasonTabs();
-            renderEditorCriteria();
-        });
-    }
-    function enableSeasonMode() {
-        const categoryId = state.movieForm.selectedCategoryId || state.categories[0]?.id || null;
-        if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
-            state.movieForm.seasons = [createSeason(categoryId, state.movieForm.criteria || [])];
-        }
-        state.movieForm.seasonMode = true;
-        state.movieForm.activeSeasonIndex = 0;
-        state.movieForm.criteria = state.movieForm.seasons[0].criteria;
-        renderSeasonTabs();
-        renderEditorCriteria();
-        updateSeasonSectionVisibility();
-        validateMovieForm();
-    }
-    function disableSeasonMode() {
-        state.movieForm.seasonMode = false;
-        state.movieForm.seasons = [];
-        state.movieForm.activeSeasonIndex = 0;
-        state.movieForm.criteria = buildFormForCategory(state.movieForm.selectedCategoryId || state.categories[0]?.id || null, []);
-        renderSeasonTabs();
-        renderEditorCriteria();
-        updateSeasonSectionVisibility();
-        validateMovieForm();
-    }
-    DOM.seasonModeToggle.addEventListener('change', () => {
-        if (DOM.seasonModeToggle.checked) {
-            enableSeasonMode();
-        } else {
-            DOM.seasonModeToggle.checked = true;
-            openConfirmModal({
-                title: 'Alle Staffelbewertungen löschen?',
-                message: 'Wenn du auf <b>Gesamtbewertung</b> umstellst, werden alle Staffelbewertungen dauerhaft gelöscht. Danach startet das Formular mit einer leeren Gesamtbewertung.',
-                confirmText: 'Gesamtbewertung aktivieren',
-                onConfirm: () => {
-                    disableSeasonMode();
-                    DOM.seasonModeToggle.checked = false;
-                }
-            });
-        }
-    });
-    DOM.addSeasonBtn.onclick = () => addSeason();
-    let seasonSwipeStart = null;
-    let seasonSwipeMoved = false;
-    DOM.seasonTabBar.addEventListener('touchstart', (e) => {
-        if (!state.movieForm.seasonMode) return;
-        const t = e.touches[0];
-        seasonSwipeStart = { x: t.clientX, y: t.clientY };
-        seasonSwipeMoved = false;
-    }, { passive: true });
-    DOM.seasonTabBar.addEventListener('touchmove', (e) => {
-        if (!state.movieForm.seasonMode || !seasonSwipeStart) return;
-        const t = e.touches[0];
-        const dx = t.clientX - seasonSwipeStart.x;
-        const dy = t.clientY - seasonSwipeStart.y;
-        if (Math.abs(dx) > Math.abs(dy)) {
-            seasonSwipeMoved = true;
-        }
-    }, { passive: true });
-    DOM.seasonTabBar.addEventListener('touchend', (e) => {
-        if (!state.movieForm.seasonMode || !seasonSwipeStart) return;
-        const t = e.changedTouches[0];
-        const dx = t.clientX - seasonSwipeStart.x;
-        const dy = t.clientY - seasonSwipeStart.y;
-        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-            if (dx < 0) {
-                selectSeason(Math.min(state.movieForm.activeSeasonIndex + 1, state.movieForm.seasons.length - 1));
-            } else {
-                selectSeason(Math.max(state.movieForm.activeSeasonIndex - 1, 0));
-            }
-        } else if (!seasonSwipeMoved) {
-            const target = e.target.closest('.season-tab-item');
-            if (target) {
-                const idx = Number(target.getAttribute('data-index'));
-                if (!Number.isNaN(idx)) selectSeason(idx);
-            }
-        }
-        seasonSwipeStart = null;
-        seasonSwipeMoved = false;
-    });
-    DOM.seasonTabBar.addEventListener('touchcancel', () => {
-        seasonSwipeStart = null;
-        seasonSwipeMoved = false;
-    });
-    function openMovieEditor(movie) {
-        lockScroll();
-        state.editingMovieId = movie ? movie.id : null;
-        document.getElementById('movieModalTitle').innerText = movie ? 'Bearbeiten' : 'Neuer Eintrag';
-        const currentCategoryId = movie?.selectedCategoryId || state.categories[0]?.id || null;
-        if (movie) {
-            state.movieForm = {
-                title: movie.title || '',
-                imageData: movie.imageData || null,
-                watchedDate: movie.watchedDate || new Date().toISOString().split('T')[0],
-                tabID: movie.tabID || state.currentTabId,
-                selectedCategoryId: currentCategoryId,
-                criteria: [],
-                seasonMode: false,
-                seasons: [],
-                activeSeasonIndex: 0
-            };
-            const existingSeasons = Array.isArray(movie.seasons) ? movie.seasons : [];
-            const inferSeasonMode = isSeriesTab(movie.tabID) && (movie.seasonMode === true || existingSeasons.length > 0);
-            if (inferSeasonMode) {
-                const normalizedSeasons = existingSeasons.length > 0
-                    ? existingSeasons.map(season => ({
-                        id: season.id || uid(),
-                        criteria: Array.isArray(season.criteria) ? season.criteria.map(c => ({
-                            id: c.id || uid(),
-                            name: c.name || '',
-                            stars: Number(c.stars || 0),
-                            notes: c.notes || ""
-                        })) : buildFormForCategory(currentCategoryId, [])
-                    }))
-                    : [createSeason(currentCategoryId, Array.isArray(movie.criteria) ? movie.criteria : [])];
-                state.movieForm.seasonMode = true;
-                state.movieForm.seasons = normalizedSeasons;
-                state.movieForm.activeSeasonIndex = 0;
-                state.movieForm.criteria = state.movieForm.seasons[0].criteria;
-            } else {
-                state.movieForm.seasonMode = false;
-                state.movieForm.seasons = [];
-                state.movieForm.activeSeasonIndex = 0;
-                state.movieForm.criteria = Array.isArray(movie.criteria) && movie.criteria.length > 0
-                    ? movie.criteria.map(c => ({
-                        id: c.id || uid(),
-                        name: c.name || '',
-                        stars: Number(c.stars || 0),
-                        notes: c.notes || ""
-                    }))
-                    : buildFormForCategory(currentCategoryId, []);
-            }
-        } else {
-            const categoryId = state.categories[0]?.id || null;
-            const baseCriteria = buildFormForCategory(categoryId, []);
-            state.movieForm = {
-                title: "",
-                imageData: null,
-                watchedDate: new Date().toISOString().split('T')[0],
-                tabID: state.currentTabId,
-                selectedCategoryId: categoryId,
-                criteria: baseCriteria,
-                seasonMode: isSeriesTab(state.currentTabId),
-                seasons: [],
-                activeSeasonIndex: 0
-            };
-            if (state.movieForm.seasonMode) {
-                state.movieForm.seasons = [createSeason(categoryId, [])];
-                state.movieForm.criteria = state.movieForm.seasons[0].criteria;
-            }
-        }
-        titleInput.value = state.movieForm.title;
-        dateInput.value = state.movieForm.watchedDate || '';
-        if (state.movieForm.imageData) {
-            posterPreview.src = state.movieForm.imageData;
-            posterPreview.style.display = 'block';
-            document.getElementById('posterPlaceholder').style.display = 'none';
-            document.getElementById('removePosterBtn').style.display = 'flex';
-        } else {
-            posterPreview.src = '';
-            posterPreview.style.display = 'none';
-            document.getElementById('posterPlaceholder').style.display = 'flex';
-            document.getElementById('removePosterBtn').style.display = 'none';
-        }
-        const delBtn = document.getElementById('deleteMovieBtn');
-        if (movie) {
-            delBtn.style.display = 'block';
-            delBtn.onclick = () => {
-                openDeleteModal(movie.title, () => {
-                    deleteDoc(doc(db, "movies", movie.id));
-                    DOM.movieModal.classList.remove('active');
-                    unlockScroll();
-                });
-            };
-        } else {
-            delBtn.style.display = 'none';
-        }
-        updateSeasonSectionVisibility();
-        renderEditorCategories();
-        renderSeasonTabs();
-        renderEditorCriteria();
-        validateMovieForm();
-        DOM.movieModal.classList.add('active');
-    }
-    function renderEditorCategories() {
-        const list = document.getElementById('categoryList');
-        list.innerHTML = '';
-        state.categories.forEach((cat) => {
-            const el = document.createElement('div');
-            el.className = `category-pill no-select ${state.movieForm.selectedCategoryId === cat.id ? 'active' : ''}`;
-            el.innerText = cat.name;
-            el.setAttribute('data-id', cat.id);
-            setupLongPress(
-                el,
-                () => { openSimpleModal('EditCategory', cat); },
-                () => {
-                    openDeleteModal(cat.name, () => {
-                        deleteDoc(doc(db, "categories", cat.id));
-                    });
-                },
-                () => {
-                    applyCategoryTemplateToCurrentForm(cat.id);
-                    renderEditorCategories();
-                    renderSeasonTabs();
-                    renderEditorCriteria();
-                    validateMovieForm();
-                }
-            );
-            el.draggable = true;
-            el.ondragstart = (e) => {
-                dragEl = el;
-                dragEl.classList.add('is-dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            };
-            el.ondragover = (e) => {
-                e.preventDefault();
-                if (!dragEl || dragEl === el) return;
-                const rect = el.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                if (e.clientY < centerY || (e.clientY === centerY && e.clientX < centerX)) {
-                    list.insertBefore(dragEl, el);
-                } else {
-                    list.insertBefore(dragEl, el.nextSibling);
-                }
-            };
-            el.ondragend = () => {
-                if (dragEl) dragEl.classList.remove('is-dragging');
-                dragEl = null;
-                const catElements = Array.from(list.querySelectorAll('.category-pill'));
-                catElements.forEach((catEl, index) => {
-                    const catId = catEl.getAttribute('data-id');
-                    if (catId) {
-                        updateDoc(doc(db, "categories", catId), { orderIndex: index });
-                    }
-                });
-            };
-            list.appendChild(el);
-        });
-    }
-    function renderEditorCriteria() {
-        const container = document.getElementById('criteriaContainer');
-        container.innerHTML = '';
-        const criteria = state.movieForm.criteria || [];
-        criteria.forEach((crit, index) => {
-            const card = document.createElement('div');
-            card.className = 'criterion-card';
-            let starsHtml = '';
-            for (let i = 1; i <= 5; i++) {
-                starsHtml += `<span class="star ${i <= crit.stars ? 'filled' : ''}" data-idx="${i}">★</span>`;
-            }
-            card.innerHTML = `
-                <div class="criterion-header">
-                    <input type="text" class="input-text" style="width: 55%; font-weight: bold; background: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border-color); padding: 5px;" placeholder="Neues Kriterium" value="${escapeHtml(crit.name)}">
-                    <div class="stars">${starsHtml}</div>
-                    <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
-                </div>
-                <textarea class="input-text" placeholder="Notizen...">${escapeHtml(crit.notes)}</textarea>
-            `;
-            card.querySelector('input').oninput = (e) => {
-                state.movieForm.criteria[index].name = e.target.value;
-            };
-            card.querySelectorAll('.star').forEach(s => {
-                s.onclick = (e) => {
-                    state.movieForm.criteria[index].stars = parseInt(e.target.getAttribute('data-idx'), 10);
-                    renderEditorCriteria();
-                };
-            });
-            card.querySelector('textarea').oninput = (e) => {
-                state.movieForm.criteria[index].notes = e.target.value;
-            };
-            card.querySelector('.btn-icon').onclick = () => {
-                const nameToDisplay = state.movieForm.criteria[index].name.trim() !== "" ? state.movieForm.criteria[index].name : "Dieses Kriterium";
-                openDeleteModal(nameToDisplay, () => {
-                    state.movieForm.criteria.splice(index, 1);
-                    renderEditorCriteria();
-                });
-            };
-            container.appendChild(card);
-        });
-    }
-    function validateMovieForm() {
-        saveBtn.disabled = state.movieForm.title.trim().length === 0;
-    }
-    function normalizeSeasonStateBeforeSave() {
+
+    function normalizeMovieFormBeforeSave() {
         if (!state.movieForm.seasonMode) return;
         if (!Array.isArray(state.movieForm.seasons) || state.movieForm.seasons.length === 0) {
-            state.movieForm.seasons = [createSeason(state.movieForm.selectedCategoryId, state.movieForm.criteria || [])];
+            state.movieForm.seasons = [createSeason(state.movieForm.criteria || [], state.movieForm.selectedTemplateIds || [])];
             state.movieForm.activeSeasonIndex = 0;
         }
-        state.movieForm.activeSeasonIndex = Math.max(
-            0,
-            Math.min(state.movieForm.activeSeasonIndex || 0, state.movieForm.seasons.length - 1)
-        );
+        state.movieForm.activeSeasonIndex = Math.max(0, Math.min(state.movieForm.activeSeasonIndex || 0, state.movieForm.seasons.length - 1));
         state.movieForm.criteria = state.movieForm.seasons[state.movieForm.activeSeasonIndex].criteria;
     }
-    saveBtn.onclick = async () => {
-        if (saveBtn.disabled) return;
-        normalizeSeasonStateBeforeSave();
-        const originalText = saveBtn.innerText;
-        saveBtn.innerText = "Speichert...";
-        saveBtn.disabled = true;
-        const baseData = {
+
+    saveMovieBtn.onclick = async () => {
+        if (saveMovieBtn.disabled) return;
+        normalizeMovieFormBeforeSave();
+
+        const originalText = saveMovieBtn.innerText;
+        saveMovieBtn.innerText = 'Speichert...';
+        saveMovieBtn.disabled = true;
+
+        const selectedTemplateIds = uniquePreserveOrder((state.movieForm.selectedTemplateIds || []).filter(id => state.categories.some(c => c.id === id)));
+
+        const data = {
             title: state.movieForm.title,
             imageData: state.movieForm.imageData,
             watchedDate: state.movieForm.watchedDate,
             tabID: state.movieForm.tabID,
-            selectedCategoryId: state.movieForm.selectedCategoryId,
+            selectedTemplateIds,
+            selectedCategoryIds: selectedTemplateIds,
+            selectedCategoryId: selectedTemplateIds[0] || null,
             seasonMode: !!state.movieForm.seasonMode,
-            criteria: state.movieForm.criteria
+            criteria: state.movieForm.criteria,
+            seasons: state.movieForm.seasonMode ? state.movieForm.seasons : []
         };
-        if (state.movieForm.seasonMode) {
-            baseData.seasons = state.movieForm.seasons;
-        } else {
-            baseData.seasons = [];
-        }
+
         if (!state.editingMovieId) {
-            baseData.dateAdded = new Date().toISOString();
+            data.dateAdded = new Date().toISOString();
         }
+
         try {
             if (state.editingMovieId) {
-                await updateDoc(doc(db, "movies", state.editingMovieId), baseData);
+                await updateDoc(doc(db, 'movies', state.editingMovieId), data);
             } else {
-                await addDoc(collection(db, "movies"), baseData);
+                await addDoc(collection(db, 'movies'), data);
             }
             DOM.movieModal.classList.remove('active');
             unlockScroll();
         } catch (error) {
             console.error(error);
-            alert("Fehler: " + error.message);
+            alert('Fehler: ' + error.message);
         } finally {
-            saveBtn.innerText = originalText;
+            saveMovieBtn.innerText = originalText;
             validateMovieForm();
         }
     };
+
     document.getElementById('newCategoryBtn').onclick = () => openSimpleModal('Category', null);
-    document.getElementById('cancelSimpleModalBtn').onclick = () => {
-        DOM.simpleModal.classList.remove('active');
+
+    DOM.manageStandardCriteriaBtn.onclick = () => openSimpleModal('StandardCriteriaManager', null);
+
+    DOM.mainMenuBtn.onclick = () => {
+        lockScroll();
+        DOM.settingsModal.classList.add('active');
+    };
+
+    DOM.closeSettingsBtn.onclick = () => {
+        DOM.settingsModal.classList.remove('active');
         unlockScroll();
     };
-    function openSimpleModal(type, item) {
+
+    DOM.toggleThemeBtn.onclick = () => {
+        const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    };
+
+    DOM.seasonLabelModeSelect.onchange = (e) => {
+        const val = e.target.value === 'short' ? 'short' : 'full';
+        localStorage.setItem('seasonLabelMode', val);
+        if (DOM.movieModal.classList.contains('active') && state.movieForm.seasonMode) {
+            renderSeasonTabs();
+        }
+    };
+
+    DOM.autoDeleteSelect.onchange = (e) => {
+        const val = e.target.value;
+        localStorage.setItem('autoDeleteSetting', val);
+        runAutoDeleteCleanup(state.movies);
+    };
+
+    DOM.sortMoviesBtn.onclick = () => {
+        renderSortModal();
         lockScroll();
-        const titleEl = document.getElementById('simpleModalTitle');
-        const bodyEl = document.getElementById('simpleModalBody');
-        const saveBtn = document.getElementById('saveSimpleModalBtn');
-        if (type === 'Tab') {
-            titleEl.innerText = 'Neuer Tab';
-            bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" placeholder="Tab-Name">`;
-            saveBtn.onclick = async () => {
-                const val = document.getElementById('tabNameInput').value.trim();
-                if (val) {
-                    try {
-                        saveBtn.disabled = true;
-                        await addDoc(collection(db, "tabs"), { name: val, orderIndex: state.tabs.length });
-                        DOM.simpleModal.classList.remove('active');
-                        unlockScroll();
-                    } catch (error) {
-                        alert("Fehler: " + error.message);
-                    } finally {
-                        saveBtn.disabled = false;
-                    }
-                }
-            };
-        } else if (type === 'EditTab') {
-            titleEl.innerText = 'Tab umbenennen';
-            bodyEl.innerHTML = `<input type="text" id="tabNameInput" class="input-text" value="${escapeHtml(item.name)}">`;
-            saveBtn.onclick = async () => {
-                const val = document.getElementById('tabNameInput').value.trim();
-                if (val) {
-                    try {
-                        saveBtn.disabled = true;
-                        await updateDoc(doc(db, "tabs", item.id), { name: val });
-                        DOM.simpleModal.classList.remove('active');
-                        unlockScroll();
-                    } catch (error) {
-                        alert("Fehler: " + error.message);
-                    } finally {
-                        saveBtn.disabled = false;
-                    }
-                }
-            };
-        } else if (type === 'Category') {
-            titleEl.innerText = 'Neue Vorlage';
-            buildCategoryEditorBody(bodyEl, "", ["Spannung"]);
-            saveBtn.onclick = async () => saveCategoryData(null, saveBtn);
-        } else if (type === 'EditCategory') {
-            titleEl.innerText = 'Vorlage bearbeiten';
-            buildCategoryEditorBody(bodyEl, item.name, item.criteriaNames);
-            saveBtn.onclick = async () => saveCategoryData(item, saveBtn);
+        DOM.sortModal.classList.add('active');
+    };
+
+    DOM.searchMoviesBtn.onclick = () => {
+        if (DOM.searchBar.classList.contains('active')) {
+            closeSearch();
+            return;
         }
-        DOM.simpleModal.classList.add('active');
+        DOM.searchBar.classList.add('active');
+        DOM.searchInput.value = state.searchQuery;
+        setTimeout(() => DOM.searchInput.focus(), 0);
+    };
+
+    DOM.closeSearchBtn.onclick = () => closeSearch();
+
+    DOM.searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value || '';
+        renderMovies();
+    });
+
+    DOM.searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSearch();
+    });
+
+    function closeSearch() {
+        state.searchQuery = '';
+        DOM.searchInput.value = '';
+        DOM.searchBar.classList.remove('active');
+        renderMovies();
     }
-    function buildCategoryEditorBody(container, nameVal, criteriaArr) {
-        container.innerHTML = `
-            <input type="text" id="catNameInput" class="input-text" placeholder="Name der Vorlage (z.B. Horror)" value="${escapeHtml(nameVal)}" style="margin-bottom: 20px;">
-            <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Enthaltene Kriterien:</div>
-            <div id="newCatCriteriaContainer"></div>
-            <button type="button" class="btn-text btn-save" style="margin-top: 10px;" id="addCatCritBtn">+ Weiteres Kriterium</button>
-        `;
-        const critContainer = document.getElementById('newCatCriteriaContainer');
-        const addCritRow = (val) => {
-            const div = document.createElement('div');
-            div.className = 'flex-row';
-            div.style.marginBottom = '10px';
-            div.style.gap = '10px';
-            div.innerHTML = `
-                <input type="text" class="input-text cat-crit-input" placeholder="Kriterium..." value="${escapeHtml(val)}">
-                <button type="button" class="btn-icon delete-cat-crit-btn" style="padding: 10px; font-size: 16px;">
-                    ${trashIconSvg}
-                </button>
-            `;
-            div.querySelector('.delete-cat-crit-btn').onclick = () => {
-                const inputVal = div.querySelector('.cat-crit-input').value.trim();
-                const nameToDisplay = inputVal !== "" ? inputVal : "Dieses Kriterium";
-                openDeleteModal(nameToDisplay, () => {
-                    div.remove();
-                });
-            };
-            critContainer.appendChild(div);
-        };
-        criteriaArr.forEach(c => addCritRow(c));
-        document.getElementById('addCatCritBtn').onclick = () => { addCritRow(""); };
-    }
-    async function saveCategoryData(existingItem, saveBtn) {
-        const name = document.getElementById('catNameInput').value.trim();
-        const inputs = document.querySelectorAll('.cat-crit-input');
-        const criteria = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val.length > 0);
-        if (name && criteria.length > 0) {
-            try {
-                saveBtn.disabled = true;
-                if (existingItem) {
-                    await updateDoc(doc(db, "categories", existingItem.id), { name: name, criteriaNames: criteria });
-                    if (state.movieForm.selectedCategoryId === existingItem.id) {
-                        applyCategoryTemplateToCurrentForm(existingItem.id, criteria);
-                        renderEditorCategories();
-                        renderSeasonTabs();
-                        renderEditorCriteria();
-                    }
-                } else {
-                    const newCatRef = await addDoc(collection(db, "categories"), {
-                        name: name,
-                        criteriaNames: criteria,
-                        orderIndex: state.categories.length
-                    });
-                    state.movieForm.selectedCategoryId = newCatRef.id;
-                    applyCategoryTemplateToCurrentForm(newCatRef.id, criteria);
-                    renderEditorCategories();
-                    renderSeasonTabs();
-                    renderEditorCriteria();
-                }
-                DOM.simpleModal.classList.remove('active');
-                unlockScroll();
-            } catch (error) {
-                alert("Fehler: " + error.message);
-            } finally {
-                saveBtn.disabled = false;
-            }
+
+    document.getElementById('cancelSortModalBtn').onclick = () => {
+        DOM.sortModal.classList.remove('active');
+        unlockScroll();
+    };
+
+    DOM.sortModal.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    DOM.sortModal.addEventListener('click', (e) => {
+        if (e.target === DOM.sortModal) {
+            DOM.sortModal.classList.remove('active');
+            unlockScroll();
         }
+    });
+
+    DOM.customDeleteModal.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    document.getElementById('deleteModalCancel').onclick = () => {
+        DOM.customDeleteModal.classList.remove('active');
+        activeDeleteAction = null;
+        unlockScroll();
+    };
+    document.getElementById('deleteModalConfirm').onclick = async () => {
+        if (activeDeleteAction) await activeDeleteAction();
+        DOM.customDeleteModal.classList.remove('active');
+        activeDeleteAction = null;
+        unlockScroll();
+    };
+
+    DOM.actionMenuModal.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    document.getElementById('actionMenuEditBtn').onclick = () => {
+        DOM.actionMenuModal.classList.remove('active');
+        if (activeEditCallback) activeEditCallback();
+    };
+    document.getElementById('actionMenuDeleteBtn').onclick = () => {
+        DOM.actionMenuModal.classList.remove('active');
+        if (activeDeleteCallback) activeDeleteCallback();
+    };
+    document.getElementById('actionMenuCancelBtn').onclick = () => {
+        DOM.actionMenuModal.classList.remove('active');
+        unlockScroll();
+    };
+
+    function openMovieEditorIfNeeded() {
+        if (!state.currentTabId && state.tabs.length > 0) state.currentTabId = state.tabs[0].id;
     }
+
+    function validateAndRenderAfterTemplateChange() {
+        if (!DOM.movieModal.classList.contains('active')) return;
+        refreshOpenMovieFormFromSources();
+    }
+
+    // The initial listeners above are the source of truth; keep the movie view in sync.
+    openMovieEditorIfNeeded();
+    renderTabs();
+    renderMovies();
 </script>
+
 </body>
 </html>
