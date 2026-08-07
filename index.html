@@ -654,6 +654,40 @@
         border-bottom: 1px solid var(--border-color);
     }
     .settings-row:last-child { border-bottom: none; }
+    .manager-scroll {
+        max-height: min(55vh, 420px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 4px;
+    }
+    .manager-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .drag-handle {
+        width: 30px;
+        min-width: 30px;
+        height: 30px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: grab;
+        touch-action: none;
+        flex: 0 0 auto;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    .manager-row input {
+        margin: 0;
+        flex: 1;
+        font-size: 14px;
+        padding: 10px 12px;
+        min-width: 0;
+    }
     .settings-row-interactive {
         cursor: pointer;
         transition: background-color 0.15s;
@@ -1845,25 +1879,37 @@
     }
 
     function renderStandardCriteriaManagerBody(container) {
+        container.style.overflow = 'hidden';
         container.innerHTML = `
-            <div class="settings-group" id="standardCriteriaList"></div>
-            <button type="button" class="btn-text btn-save" id="addStandardCriterionBtn" style="margin-top: 10px;">+ Standard-Kriterium hinzufügen</button>
+            <div style="display:flex; flex-direction:column; gap:12px; min-height:0;">
+                <div class="standard-criteria-scroll manager-scroll">
+                    <div class="settings-group" id="standardCriteriaList" style="margin-bottom:0;"></div>
+                </div>
+                <button type="button" class="btn-text btn-save" id="addStandardCriterionBtn" style="margin-top: 0;">+ Standard-Kriterium hinzufügen</button>
+            </div>
         `;
 
         const list = document.getElementById('standardCriteriaList');
+        const dragHandleSvg = `
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style="width:18px;height:18px;">
+                <path d="M3 4.5h10v1H3zM3 8h10v1H3zM3 11.5h10v1H3z"/>
+            </svg>`;
 
         const addRow = (crit) => {
             const row = document.createElement('div');
             row.className = 'settings-row manager-row no-select';
-            row.draggable = true;
             row.dataset.dbId = crit.id || '';
             row.innerHTML = `
+                <button type="button" class="drag-handle" aria-label="Verschieben" title="Verschieben">${dragHandleSvg}</button>
                 <input type="text" class="input-text" value="${escapeHtml(crit.name || '')}" placeholder="Standard-Kriterium">
                 <button type="button" class="btn-icon" style="font-size: 16px;">${trashIconSvg}</button>
             `;
 
+            const handle = row.querySelector('.drag-handle');
             const input = row.querySelector('input');
-            row.querySelector('button').onclick = () => {
+            const deleteBtn = row.querySelector('button.btn-icon');
+
+            deleteBtn.onclick = () => {
                 openDeleteModal(input.value.trim() || 'Dieses Kriterium', () => row.remove());
             };
 
@@ -1879,11 +1925,17 @@
                 }
             );
 
-            row.ondragstart = (e) => {
+            handle.draggable = true;
+            handle.ondragstart = (e) => {
                 dragEl = row;
                 row.classList.add('is-dragging');
                 e.dataTransfer.effectAllowed = 'move';
             };
+            handle.ondragend = () => {
+                if (dragEl) row.classList.remove('is-dragging');
+                dragEl = null;
+            };
+
             row.ondragover = (e) => {
                 e.preventDefault();
                 if (!dragEl || dragEl === row) return;
@@ -1891,10 +1943,6 @@
                 const isAfter = (e.clientY - rect.top) > (rect.height / 2);
                 if (isAfter) list.insertBefore(dragEl, row.nextSibling);
                 else list.insertBefore(dragEl, row);
-            };
-            row.ondragend = () => {
-                if (dragEl) row.classList.remove('is-dragging');
-                dragEl = null;
             };
 
             list.appendChild(row);
@@ -1929,24 +1977,30 @@
 
         saveBtn.disabled = true;
         try {
-            const kept = new Set();
+            const existingById = new Map((state.standardCriteria || []).map(c => [c.id, c]));
+            const nextStandardCriteria = [];
+
             for (let i = 0; i < deduped.length; i++) {
                 const item = deduped[i];
-                if (item.dbId && state.standardCriteria.some(c => c.id === item.dbId)) {
-                    kept.add(item.dbId);
-                    await updateDoc(doc(db, 'standardCriteria', item.dbId), { name: item.name, orderIndex: i });
+                let id = item.dbId;
+
+                if (id && existingById.has(id)) {
+                    await updateDoc(doc(db, 'standardCriteria', id), { name: item.name, orderIndex: i });
                 } else {
                     const ref = await addDoc(collection(db, 'standardCriteria'), { name: item.name, orderIndex: i });
-                    kept.add(ref.id);
+                    id = ref.id;
                 }
+
+                nextStandardCriteria.push({ id, name: item.name, orderIndex: i });
             }
 
             for (const existing of state.standardCriteria) {
-                if (!deduped.some(d => d.dbId === existing.id)) {
+                if (!nextStandardCriteria.some(item => item.id === existing.id)) {
                     await deleteDoc(doc(db, 'standardCriteria', existing.id));
                 }
             }
 
+            state.standardCriteria = nextStandardCriteria;
             DOM.simpleModal.classList.remove('active');
             unlockScroll();
             refreshOpenMovieFormFromSources();
@@ -2028,6 +2082,7 @@
 
         saveBtn.disabled = false;
         saveBtn.textContent = 'Speichern';
+        bodyEl.style.overflow = '';
 
         if (type === 'Tab') {
             titleEl.innerText = 'Neuer Tab';
